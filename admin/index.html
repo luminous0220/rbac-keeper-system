@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>rbackeeper-admin</title>
+	</head>
+
+	<body>
+		<div id="root">
+			<div class="root-wrapper">
+				<img src="/loading.svg" style="width: 25%; height: 25%" alt="图标" />
+			</div>
+		</div>
+
+		<style>
+			html,
+			body,
+			#root {
+				position: relative;
+				width: 100%;
+				height: 100%;
+			}
+
+			* {
+				margin: 0;
+				padding: 0;
+			}
+
+			.root-wrapper {
+				width: 100%;
+				height: 100%;
+				display: flex;
+				justify-content: center;
+				align-items: center;
+			}
+		</style>
+
+		<script type="module" src="/src/main.tsx"></script>
+	</body>
+</html>

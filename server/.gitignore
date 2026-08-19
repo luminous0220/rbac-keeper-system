@@ -1,0 +1,27 @@
+# Go 编译出的二进制文件 (根据你的实际项目名修改)
+server
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Go 测试生成的二进制文件
+*.test
+
+# Go 代码覆盖率输出
+*.out
+
+# Go 模块缓存 (如果不打算将 vendor 提交到仓库)
+vendor/
+
+# 日志文件
+*.log
+logs/
+
+# 临时编译目录
+tmp/
+/.DS_Store
+/docs
+/logs
+__debug*

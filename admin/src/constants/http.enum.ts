@@ -1,0 +1,20 @@
+export enum HTTP_STATUS {
+	SUCCESS = 200,
+	BAD_REQUEST = 400,
+	UNAUTHORIZED = 401,
+}
+
+// 后端统一业务码，与 server/response/response.go 对齐
+// 业务错误时 HTTP 状态仍为 200，前端需按 code 判断
+export enum BUSINESS_CODE {
+	SUCCESS = 0,
+	INVALID_PARAM = 40001,
+	IDEMPOTENT = 40002,
+	UNAUTHORIZED = 40101,
+	TOKEN_EXPIRED = 40102,
+	TOKEN_INVALID = 40103,
+	FORBIDDEN = 40301,
+	TOO_MANY_REQUESTS = 40302,
+	NOT_FOUND = 40401,
+	SERVER = 50001,
+}

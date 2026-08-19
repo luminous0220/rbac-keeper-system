@@ -1,0 +1,103 @@
+# ==================== 全局应用配置 ====================
+
+# 运行模式：debug / release / test
+# debug: 开启详细日志和调试中间件；release: 生产环境，关闭调试信息；test: 测试环境
+mode: "debug"
+
+# 旧日志文件保留天数，<=0 表示不清理旧日志，建议生产环境设为 7-30
+log-max-age: 1
+
+# ==================== HTTP 服务配置 ====================
+server:
+  # 服务监听端口，默认 8080
+  port: 8001
+  # 请求体读取超时时间（包含整个请求体传输过程），建议设为 5s-30s
+  readTimeout: 30s
+  # 响应体写入超时时间（包含整个响应体传输过程），建议设为 10s-60s
+  writeTimeout: 30s
+
+# ==================== MySQL 配置 ====================
+mysql:
+  # 数据库连接字符串
+  # 格式：user:pass@tcp(host:port)/dbname?charset=utf8mb4&parseTime=true&loc=Local
+  # parseTime=true 必须开启，否则 time.Time 类型无法正确解析
+  dsn: "root:zhan123123@tcp(127.0.0.1:3306)/rbackeeper?charset=utf8mb4&parseTime=true&loc=Local"
+  # 最大打开连接数，0 表示无限制
+  # 建议设为 CPU 核心数的 2-4 倍，过高会导致数据库连接耗尽
+  maxOpenConns: 100
+  # 最大空闲连接数，建议与 maxOpenConns 保持一致或略小
+  maxIdleConns: 10
+  # 连接最大存活时间，超过后连接会被自动回收
+  # 建议设为 MySQL wait_timeout 的 70%，避免使用已失效的连接
+  connMaxLifetime: 1h
+  # GORM 日志级别：0=Silent, 1=Error, 2=Warn, 3=Info, 4=Trace
+  # 生产环境建议设为 2(Warn)，仅记录慢查询和错误
+  logLevel: 2
+
+# ==================== Redis 配置 ====================
+redis:
+  # Redis 服务地址，格式为 "host:port"
+  addr: "127.0.0.1:6379"
+  # Redis 认证密码，为空表示无需认证
+  # 生产环境务必设置密码，不要留空
+  password: "zhan123123"
+  # 选用的 Redis 数据库编号，范围 0-15
+  db: 0
+  # 连接池大小，建议设为并发请求数的 1.5-2 倍
+  poolSize: 50
+
+# ==================== MinIO 对象存储配置 ====================
+minio:
+  # MinIO 服务端点地址，格式为 "host:port"
+  endpoint: "127.0.0.1:9000"
+  # MinIO 访问密钥 ID
+  # 生产环境建议从环境变量读取，不要硬编码
+  accessKey: "minioadmin"
+  # MinIO 访问密钥密码
+  # 生产环境建议从环境变量读取，不要硬编码
+  secretKey: "minioadmin"
+  # 默认存储桶名称
+  bucket: "rbackeeper"
+  # 是否启用 SSL/TLS 加密连接
+  # 生产环境必须设为 true，并配置有效证书
+  useSSL: false
+  # 预签名 URL 有效期，过期后 URL 不可访问
+  # 根据业务场景调整，过短影响用户体验，过长存在安全风险
+  presignExpire: 15m
+
+# ==================== JWT 鉴权配置 ====================
+jwt:
+  # JWT 签名密钥，建议使用 32 字节以上随机字符串
+  # ⚠️ 生产环境必须更换，不要使用默认值 "change-me"
+  # ⚠️ 建议从环境变量或密钥管理服务读取
+  secret: "change-me"
+  # Token 签发者标识，用于校验 Token 来源
+  issuer: "rbackeeper"
+  # Access Token 有效期，建议 15-30 分钟
+  accessExpire: 3000h
+  # Refresh Token 有效期，建议 7-30 天
+  refreshExpire: 3000h
+
+# ==================== 令牌桶限流配置 ====================
+# 基于 Redis 原子计数，分布式生效
+ratelimit:
+  # 每秒生成的令牌数，即平均请求速率上限
+  rate: 100
+  # 令牌桶最大容量，允许突发请求超过 rate 的瞬时峰值
+  # 建议设为 rate 的 1.5-3 倍
+  burst: 200
+
+# ==================== RocketMQ 消息队列配置 ====================
+rocketmq:
+  # NameServer 地址列表，格式 "host:port"，多个用逗号分隔
+  # 生产环境建议至少配置两个 NameServer 保证高可用
+  namesrv: "127.0.0.1:9876"
+  brokerAddr: "127.0.0.1:10909"
+  # ACL 访问密钥，未开启 RocketMQ ACL 时留空
+  accessKey: ""
+  secretKey: ""
+  # 消费失败最大重试次数，超过后自动进入死信队列 %DLQ%operation-log-group
+  # -1 表示无限重试；默认 16
+  maxReconsumeTimes: 3
+  # 生产者同步发送超时时间，入队不阻塞业务太久
+  sendTimeout: 3s
