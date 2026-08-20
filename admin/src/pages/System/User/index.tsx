@@ -1,13 +1,29 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { App, Button, Space, Tag } from "antd";
+import {
+	App,
+	Button,
+	Card,
+	Empty,
+	Input,
+	Space,
+	Tag,
+	Tooltip,
+	Tree,
+} from "antd";
 import { CopyableCell, ProTable } from "@/components/ProTable";
-import type { ProTableRef, ProTableColumnType } from "@/components/ProTable";
+import type {
+	ProTableRef,
+	ProTableColumnType,
+	ProTableProps,
+} from "@/components/ProTable";
 import { ProForm } from "@/components/ProForm";
 import type { ProFormFields, ProFormInstance } from "@/components/ProForm";
 import { Api, IApi } from "@/apis";
 import { usePerms } from "@/hooks";
 import dayjs from "dayjs";
-import { EditOutlined } from "@ant-design/icons";
+import { EditOutlined, ReloadOutlined } from "@ant-design/icons";
+import { filterTree } from "@/libs";
+import { IconSearch } from "@tabler/icons-react";
 
 // 性别展示：UserItem.sex 按 model 语义 1男 2女（0 为新增接口遗留的未知态）
 const SEX_TEXT: Record<number, string> = { 0: "未知", 1: "男", 2: "女" };
@@ -47,6 +63,16 @@ function toTreeSelect(nodes: IApi.DeptRaw[]): OptionItem[] {
 	}));
 }
 
+/** 部门树 → antd Tree 数据结构（左侧部门筛选） */
+
+function toTreeData(nodes: IApi.DeptRaw[]): TreeNodeItem[] {
+	return nodes.map((d) => ({
+		title: d.dept_name,
+		key: d.id,
+		children: d.children?.length ? toTreeData(d.children) : undefined,
+	}));
+}
+
 /**
  * 用户管理：列表 / 新增 / 编辑。
  * - 列表行 key 用 username（UserItem 脱敏无 id）
@@ -62,15 +88,25 @@ const UserPage: React.FC = () => {
 	const editFormRef = useRef<ProFormInstance>(null);
 
 	const [deptTree, setDeptTree] = useState<IApi.DeptRaw[]>([]);
+	const [deptLoading, setDeptLoading] = useState(true);
 	const [roleOptions, setRoleOptions] = useState<
 		{ label: string; value: string }[]
 	>([]);
+	// 左侧部门树选中状态：selectedKeys 控展开高亮，selectedDeptId 决定列表的部门过滤
+	const [selectedKeys, setSelectedKeys] = useState<React.Key[]>([0]); // 默认选中"全部部门"
+	const [selectedDeptId, setSelectedDeptId] = useState<number | undefined>();
 
-	// 挂载时预取部门树与角色列表（表单下拉选项）
-	useEffect(() => {
+	const fetchDeptTree = useCallback(() => {
+		setDeptLoading(true); // 点击刷新时也应显示 loading
 		Api.getDeptTree()
 			.then(setDeptTree)
-			.catch((err) => console.error("加载部门树失败", err));
+			.catch((err) => console.error("加载部门树失败", err))
+			.finally(() => setDeptLoading(false));
+	}, []);
+
+	// 挂载时预取部门树与角色列表（表单下拉选项 + 左侧筛选树）
+	useEffect(() => {
+		fetchDeptTree();
 		Api.getRoleList()
 			.then((list) => {
 				setRoleOptions(
@@ -78,9 +114,46 @@ const UserPage: React.FC = () => {
 				);
 			})
 			.catch((err) => console.error("加载角色列表失败", err));
-	}, []);
+	}, [fetchDeptTree]);
 
 	const deptTreeData = useMemo(() => toTreeSelect(deptTree), [deptTree]);
+
+	// 左侧部门树数据：顶部固定一个"全部部门"根节点，选中即清空部门筛选
+	const [searchValue, setSearchValue] = useState("");
+	const deptFilterTree = useMemo<TreeNodeItem[]>(() => {
+		const originalTree = [
+			{ title: "全部部门", key: 0, children: toTreeData(deptTree) },
+		];
+		return filterTree(originalTree, searchValue);
+	}, [deptTree, searchValue]);
+
+	// 部门树加载完成后默认全部展开（antd defaultExpandAll 只在首次挂载生效，异步数据需受控展开）
+	const allDeptKeys = useMemo(() => {
+		const keys: number[] = [];
+		const walk = (nodes: IApi.DeptRaw[]) => {
+			nodes.forEach((n) => {
+				keys.push(n.id);
+				if (n.children?.length) walk(n.children);
+			});
+		};
+		walk(deptTree);
+		return keys;
+	}, [deptTree]);
+	const [expandedKeys, setExpandedKeys] = useState<React.Key[]>([]);
+	useEffect(() => {
+		if (allDeptKeys.length) setExpandedKeys([0, ...allDeptKeys]);
+	}, [allDeptKeys]);
+
+	// 选中部门 → 注入 deptId 到表格查询（ProTable.externalParams 变化时自动回第 1 页刷新）
+	const handleDeptSelect = useCallback((keys: React.Key[]) => {
+		setSelectedKeys(keys);
+		// key 为 0（全部部门）或点击已选中节点取消选择（keys 为空）→ 均清空部门筛选
+		setSelectedDeptId((keys[0] as number) || undefined);
+	}, []);
+	const externalParams = useMemo(
+		() => (selectedDeptId ? { deptId: selectedDeptId } : {}),
+		[selectedDeptId],
+	);
 
 	const deptFlatenOptions = useMemo(() => {
 		const options: OptionItem[] = [];
@@ -411,42 +484,113 @@ const UserPage: React.FC = () => {
 		];
 	}, [roleOptions, openEdit, deptFlatenOptions]);
 
+	// ---- 表格配置 ----
+	const tableProps: ProTableProps<IApi.UserItem> = useMemo(() => {
+		return {
+			rowKey: "username",
+			api: Api.getUserList,
+			columns: columns, // 建议你的 columns 变量也使用 useMemo 包裹
+			title: "用户管理",
+			externalParams: externalParams, // 如果 externalParams 是动态的，确保它也是稳定引用
+			search: {
+				fields: [
+					{
+						type: "input",
+						label: "用户名",
+						name: "username",
+						fieldProps: { placeholder: "请输入" },
+					},
+					{
+						type: "input",
+						label: "手机号",
+						name: "phone",
+						fieldProps: { placeholder: "请输入" },
+					},
+					{
+						type: "select",
+						label: "状态",
+						name: "status",
+						fieldProps: {
+							options: STATUS_OPTIONS,
+							allowClear: true,
+							placeholder: "点击选择",
+						},
+					},
+				],
+			},
+			toolbarExtra: !hasPerm("system:user:add") ? undefined : (
+				<Button
+					type="primary"
+					onClick={() =>
+						addFormRef.current?.open({
+							title: "新增用户",
+							initialValues: {
+								sex: 1, // 默认男
+								// 左侧选中了部门时预填所属部门
+								...(selectedDeptId ? { deptId: selectedDeptId } : {}),
+							},
+						})
+					}
+				>
+					新增用户
+				</Button>
+			),
+		};
+	}, [columns, externalParams, hasPerm, selectedDeptId]);
+
 	return (
 		<>
-			<ProTable<IApi.UserItem>
-				ref={tableRef}
-				rowKey="username"
-				api={Api.getUserList}
-				columns={columns}
-				title="用户管理"
-				toolbarExtra={
-					hasPerm("system:user:add") ? (
-						<Button
-							type="primary"
-							onClick={() =>
-								addFormRef.current?.open({
-									title: "新增用户",
-									initialValues: { sex: 1 }, // 默认男
-								})
-							}
-						>
-							新增用户
-						</Button>
-					) : undefined
-				}
-				search={{
-					fields: [
-						{ type: "input", label: "用户名", name: "username" },
-						{ type: "input", label: "手机号", name: "phone" },
-						{
-							type: "select",
-							label: "状态",
-							name: "status",
-							fieldProps: { options: STATUS_OPTIONS, allowClear: true },
+			<div className="flex gap-2 items-start">
+				{/* 左侧部门树：选中部门后右侧表格按「该部门 + 全部子部门」过滤（data-scope 仍叠加生效） */}
+				<Card
+					className="w-[223px] self-stretch"
+					title="部门"
+					size="small"
+					loading={deptLoading}
+					extra={
+						<Tooltip title="刷新">
+							<Button
+								icon={<ReloadOutlined />}
+								onClick={fetchDeptTree}
+							/>
+						</Tooltip>
+					}
+					styles={{
+						body: {
+							padding: 8,
+							overflow: "auto",
 						},
-					],
-				}}
-			/>
+					}}
+				>
+					<Input
+						className="w-full mb-2"
+						placeholder="搜索部门"
+						prefix={
+							<IconSearch size={14} stroke={1.5} className="text-gray-400" />
+						}
+						allowClear
+						value={searchValue}
+						onChange={(e) => setSearchValue(e.target.value)}
+						style={{ width: "100%" }}
+					/>
+					{deptFilterTree.length == 0 ? (
+						<Empty image={Empty.PRESENTED_IMAGE_SIMPLE} />
+					) : (
+						<Tree
+							blockNode
+							showLine
+							treeData={deptFilterTree}
+							selectedKeys={selectedKeys}
+							expandedKeys={expandedKeys}
+							onSelect={handleDeptSelect}
+							onExpand={(keys) => setExpandedKeys(keys)}
+						/>
+					)}
+				</Card>
+				<div className="flex-1 min-w-0">
+					<ProTable<IApi.UserItem> ref={tableRef} {...tableProps} />
+				</div>
+			</div>
 			{/* 新增用户弹窗 */}
 			<ProForm
 				className={"grid grid-cols-2 gap-4"}

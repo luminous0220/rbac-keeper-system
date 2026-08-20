@@ -62,6 +62,7 @@ export function ProTableInner<T>(
 		scroll,
 		defaultPagination = { pageNumber: 1, pageSize: DEFAULT_PAGE_SIZE },
 		search,
+		externalParams,
 		exportable = false,
 		exportFileName,
 		onExport,
@@ -119,6 +120,7 @@ export function ProTableInner<T>(
 				pageNumber: pagination.pageNumber,
 				pageSize: pagination.pageSize,
 				...searchValues,
+				...externalParams,
 			});
 			if (!result || !result.data) return;
 			setDataSource(result.data);
@@ -127,7 +129,7 @@ export function ProTableInner<T>(
 			handleDelayCloseLoading();
 			ignore.current = false;
 		}
-	}, [api, pagination.pageNumber, pagination.pageSize, searchValues]);
+	}, [api, pagination.pageNumber, pagination.pageSize, searchValues, externalParams]);
 
 	// 自动请求
 	useEffect(() => {
@@ -162,6 +164,22 @@ export function ProTableInner<T>(
 		forceRefreshRef.current = true;
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [searchValues]);
+
+	// 外部参数变化时刷新（重置分页到第一页，与筛选值变化行为一致）。
+	// 非第 1 页时改分页走「分页变更」刷新；已在第 1 页时直接刷新，让新参数立即生效。
+	const prevExternalParamsRef = useRef<Record<string, unknown> | undefined>(
+		externalParams,
+	);
+	useEffect(() => {
+		if (!api || !auto || !initializedRef.current) return;
+		if (prevExternalParamsRef.current === externalParams) return;
+		prevExternalParamsRef.current = externalParams;
+		if (pagination.pageNumber === 1) {
+			refresh();
+		} else {
+			setPagination((prev) => ({ ...prev, pageNumber: 1 }));
+		}
+	}, [externalParams, api, auto, refresh, pagination.pageNumber]);
 
 	// 同步外部数据
 	useEffect(() => {

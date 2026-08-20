@@ -15,7 +15,13 @@ declare global {
 		text?: string;
 		title?: string;
 		label?: string;
-		value: any;
+		value?: any;
 		children?: OptionItem[];
+	}
+
+	interface TreeNodeItem {
+		title: string;
+		key: number;
+		children?: DeptTreeNode[];
 	}
 }

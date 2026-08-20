@@ -28,6 +28,20 @@ func UserList(ctx *gin.Context, query dto.UserListQuery) (*dto.UserListResp, err
 		Status:   query.Status,
 		DeptID:   query.DeptID,
 	}
+	// 部门筛选：选中部门连同其全部子部门一起参与过滤（部门树左侧筛选的语义）。
+	// 需全量部门列表（不应用数据权限）展开子树，否则子部门被权限裁剪后会漏过滤；
+	// 用户行的可见性仍由 dao 中的 GetUserDataScope 单独约束。
+	if query.DeptID != nil {
+		all, err := dao.GetAllDeptsScoped(nil, nil)
+		if err != nil {
+			return nil, err
+		}
+		q.DeptIDs = utils.CollectSubtreeIDs(all,
+			func(d model.Dept) uint { return d.ID },
+			func(d model.Dept) uint { return d.ParentID },
+			*query.DeptID,
+		)
+	}
 	users, total, err := dao.GetUserList(ctx, q)
 
 	if err != nil {

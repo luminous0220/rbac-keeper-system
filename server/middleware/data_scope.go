@@ -76,17 +76,12 @@ func computeScope(user *model.User) (int8, []uint, uint, uint) {
 			// 计算"本部门及以下"需要全量部门树，不应用数据权限
 			all, err := dao.GetAllDeptsScoped(nil, nil)
 			if err == nil {
-				// 找本部门及所有子部门
-				childrenMap := map[uint][]uint{}
-				for _, d := range all {
-					childrenMap[d.ParentID] = append(childrenMap[d.ParentID], d.ID)
-				}
-				queue := []uint{user.DeptID}
-				for len(queue) > 0 {
-					cur := queue[0]
-					queue = queue[1:]
-					ids[cur] = struct{}{}
-					queue = append(queue, childrenMap[cur]...)
+				for _, id := range utils.CollectSubtreeIDs(all,
+					func(d model.Dept) uint { return d.ID },
+					func(d model.Dept) uint { return d.ParentID },
+					user.DeptID,
+				) {
+					ids[id] = struct{}{}
 				}
 			}
 		} else {

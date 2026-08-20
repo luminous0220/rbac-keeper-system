@@ -52,8 +52,8 @@ func GetUserList(ctx *gin.Context, q dto.UserListQuery) ([]model.User, int64, er
 	if q.Status != nil {
 		tx = tx.Where("status = ?", *q.Status)
 	}
-	if q.DeptID != nil {
-		tx = tx.Where("dept_id = ?", q.DeptID)
+	if len(q.DeptIDs) > 0 {
+		tx = tx.Where("dept_id IN ?", q.DeptIDs)
 	}
 
 	var total int64

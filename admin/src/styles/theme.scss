@@ -10,12 +10,12 @@
 	.ant-table-thead tr th {
 		color: #888 !important;
 		font-size: 12px;
-		background-color: var(--input-bg) !important;
+		background-color: var(--sec-bg) !important;
 	}
 }
 
 .ant-table-body {
-	scrollbar-width: thin;	
+	scrollbar-width: thin;
 	scrollbar-color: #bfbfbf transparent; /* 滑块颜色 轨道颜色 */
 }
 

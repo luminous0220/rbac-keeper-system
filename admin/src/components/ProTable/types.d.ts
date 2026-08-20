@@ -87,6 +87,9 @@ export interface ProTableProps<T>
 		defaultPagination?: ProTablePagination;
 		/** 筛选表单配置，undefined时不显示筛选表单 */
 		search?: ProTableSearchConfig;
+		/** 外部注入的查询参数（如左侧部门树筛选），与筛选表单值合并后传给 api。
+		 *  对象引用变化时自动重置到第 1 页并刷新；请用 useMemo 保持引用稳定，避免每次渲染触发刷新。 */
+		externalParams?: Record<string, unknown>;
 		/** 是否显示导出按钮，默认 false */
 		exportable?: boolean;
 		/** 导出文件名（不含扩展名），默认使用 title 或当前日期 */

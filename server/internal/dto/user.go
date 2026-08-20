@@ -14,8 +14,10 @@ type UserListQuery struct {
 	Phone string `form:"phone"`
 	// 状态 0禁用 1正常 不传则查询全部
 	Status *int8 `form:"status" binding:"omitempty,oneof=0 1"`
-	// 部门ID
+	// 部门ID（查询入参；service 会按"该部门 + 全部子部门"展开为 DeptIDs）
 	DeptID *uint `form:"deptId"`
+	// 展开后的部门 ID 集合（含子部门），service 填充，非查询入参
+	DeptIDs []uint `form:"-"`
 }
 
 type BriefRole struct {

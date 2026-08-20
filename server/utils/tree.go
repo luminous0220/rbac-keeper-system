@@ -102,6 +102,36 @@ func WouldCreateCycle(parentMap map[uint]uint, selfID, newParentID uint) bool {
 	return false
 }
 
+// 收集指定根节点及其全部后代节点的 ID（BFS，包含根节点自身）。
+// 用于"本部门及子部门"类的范围过滤（部门树选中某节点时，须连同其子部门一起参与筛选）。
+// 注意事项：
+//   - 调用方须传入全量节点列表（不应用数据权限过滤），否则子树会被权限裁剪、漏掉后代节点。
+//   - rootID 为 0 或列表为空时返回 nil，调用方据此跳过过滤。
+func CollectSubtreeIDs[T any](
+	items []T,
+	getID func(T) uint,
+	getParentID func(T) uint,
+	rootID uint,
+) []uint {
+	if rootID == 0 || len(items) == 0 {
+		return nil
+	}
+	// 建立 parentID -> 子节点ID 的映射，自根向下 BFS，天然去重（每个节点只入队一次）
+	childrenOf := make(map[uint][]uint, len(items))
+	for i := range items {
+		childrenOf[getParentID(items[i])] = append(childrenOf[getParentID(items[i])], getID(items[i]))
+	}
+	ids := make([]uint, 0, len(items))
+	queue := []uint{rootID}
+	for len(queue) > 0 {
+		cur := queue[0]
+		queue = queue[1:]
+		ids = append(ids, cur)
+		queue = append(queue, childrenOf[cur]...)
+	}
+	return ids
+}
+
 // 过滤树形数据：保留匹配节点及其全部祖先，保证过滤后树结构完整。
 // 用于菜单/部门按名称模糊查询时，避免父链断裂导致树散开成孤立节点。
 func FilterTreeWithAncestors[T any](

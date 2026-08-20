@@ -5,7 +5,6 @@ export * from "./request";
 export * from "./iconMap";
 export * from "./assetUrl";
 
-
 /**
  * @description 递归函数来遍历树形数组，并将 children 字段长度为 0 的节点的 children 设置为 undefined（或直接删除该字段）
  */
@@ -175,4 +174,32 @@ export const initResize = () => {
 	resize();
 
 	window.addEventListener("resize", resize);
+};
+
+/**
+* @description 用来过滤树形节点
+*/
+export const filterTree = (nodes: TreeNodeItem[], keyword: string): TreeNodeItem[] => {
+	if (!keyword) return nodes;
+
+	return nodes
+		.map((node) => {
+			// 递归过滤子节点
+			const filteredChildren = node.children 
+				? filterTree(node.children, keyword) 
+				: [];
+
+			const isMatch = node.title.toLowerCase().includes(keyword.toLowerCase());
+			
+			// 只要当前节点匹配，或者子节点有匹配，就保留该节点
+			if (isMatch || filteredChildren.length > 0) {
+				return {
+					...node,
+					// 如果子节点有匹配，保留过滤后的子节点；否则清空子节点（变成叶子节点）
+					children: filteredChildren.length > 0 ? filteredChildren : undefined,
+				};
+			}
+			return null;
+		})
+		.filter(Boolean) as TreeNodeItem[];
 };
