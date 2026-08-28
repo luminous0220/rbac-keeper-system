@@ -221,6 +221,9 @@ const RolePage: React.FC = () => {
 			type: "radio",
 			label: "数据权限",
 			name: "dataScope",
+			formItemProps: {
+				className: "col-span-3",
+			},
 			fieldProps: { options: DATA_SCOPE_OPTIONS },
 			rules: [{ required: true, message: "请选择数据权限" }],
 		},
@@ -228,6 +231,9 @@ const RolePage: React.FC = () => {
 			type: "textarea",
 			label: "备注",
 			name: "remark",
+			formItemProps: {
+				className: "col-span-3",
+			},
 			fieldProps: {
 				maxLength: 500,
 				rows: 3,
@@ -419,7 +425,7 @@ const RolePage: React.FC = () => {
 		formRef: React.MutableRefObject<ProFormInstance | null>,
 	) => (
 		<>
-			<Form.Item label="菜单权限" name="menuIds">
+			<Form.Item label="菜单权限" name="menuIds" className="col-span-3">
 				<TreeTrigger
 					nameMap={menuNameMap}
 					placeholder="请选择菜单权限"
@@ -495,7 +501,8 @@ const RolePage: React.FC = () => {
 				ref={addRoleFormRef}
 				fields={addRoleFields}
 				onConfirm={handleRoleAdd}
-				width={640}
+				className="grid grid-cols-3 gap-4"
+				width={840}
 			>
 				{renderTreeTriggers(addRoleFormRef)}
 			</ProForm>
@@ -504,6 +511,7 @@ const RolePage: React.FC = () => {
 				ref={editRoleFormRef}
 				fields={editRoleFields}
 				onConfirm={handleRoleEdit}
+				className="grid grid-cols-2 gap-4"
 				width={640}
 			>
 				{renderTreeTriggers(editRoleFormRef)}

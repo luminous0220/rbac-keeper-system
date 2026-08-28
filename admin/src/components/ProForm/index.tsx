@@ -6,7 +6,7 @@ import {
 	useRef,
 	useState,
 } from "react";
-import { Form, Button, Drawer } from "antd";
+import {  Form, Button, Drawer } from "antd";
 import type {
 	ProFormProps,
 	TypedFieldConfig,
@@ -20,6 +20,7 @@ import {
 	normalizeTimeFields,
 	isDividerField,
 	isCustomField,
+	isFormDirty,
 } from "./utils";
 import { ProModal } from "../ProModal";
 import { IconChevronDown, IconChevronUp } from "@tabler/icons-react";
@@ -52,9 +53,9 @@ export const ProForm = forwardRef<ProFormInstance, ProFormProps>(
 			type = "modal",
 			width,
 			destroyOnHidden = false,
+			confirmOnClose = true,
 			onClose,
 			footer,
-			children,
 			...formProps
 		} = props;
 		const isMobile = useGlobalStore((s) => s.isMobile);
@@ -134,13 +135,19 @@ export const ProForm = forwardRef<ProFormInstance, ProFormProps>(
 					form.resetFields();
 					form.setFieldsValue(normalized);
 					baselineRef.current = params.initialValues;
+				} else {
+					// 未提供初始值时，以当前表单值为基线，避免上次残留值被误判为已修改
+					baselineRef.current = normalizeTimeFields(
+						form.getFieldsValue(),
+						fields,
+					) as Record<string, unknown>;
 				}
 			},
 			[type, fields, form],
 		);
 
-		// 关闭弹窗/抽屉
-		const close = useCallback(() => {
+		// 真正执行关闭（跳过未保存确认）
+		const forceClose = useCallback(() => {
 			if (type === "pure") return;
 			setIsOpen(false);
 			onClose?.();
@@ -148,6 +155,24 @@ export const ProForm = forwardRef<ProFormInstance, ProFormProps>(
 				form.resetFields();
 			});
 		}, [type, onClose, form]);
+
+		// 关闭弹窗/抽屉：表单已修改且开启确认时，弹出“未保存修改”提示；未修改则直接关闭
+		const close = useCallback(() => {
+			if (type === "pure") return;
+			if (confirmOnClose && isFormDirty(form, baselineRef.current, fields)) {
+				window.$modal.confirm({
+					title: "确认关闭",
+					content: "表单内容已修改，关闭后将丢失未保存的修改，确定关闭吗？",
+					okText: "确定关闭",
+					cancelText: "取消",
+					onOk: () => {
+						forceClose();
+					},
+				});
+				return;
+			}
+			forceClose();
+		}, [type, confirmOnClose, form, fields, forceClose]);
 
 		// 处理初始值中的时间字段转换
 		const normalizedInitialValues = useMemo(
@@ -362,7 +387,6 @@ export const ProForm = forwardRef<ProFormInstance, ProFormProps>(
 					layout={layout}
 				>
 					{renderedFields}
-					{children}
 					{type === "pure" && renderedFooter}
 				</Form>
 			</>

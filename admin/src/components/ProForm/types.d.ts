@@ -132,10 +132,13 @@ type ProFormProps = Omit<FormProps, "fields" | "title" | "onFinish"> & {
 	width?: number;
 	/** 关闭时销毁表单内容 */
 	destroyOnHidden?: boolean;
+	/**
+	 * 关闭前（点击遮罩 / 关闭按钮）若表单已修改，弹出“未保存修改”确认提示
+	 * 默认开启；表单未修改时直接关闭不提示
+	 */
+	confirmOnClose?: boolean;
 	/** 弹窗/抽屉关闭回调 */
 	onClose?: () => void;
-	/** 自定义内容，渲染在表单字段与 footer 之间 */
-	children?: React.ReactNode;
 	/** 顶部内容，渲染在表单字段上方 */
 	topContent?: React.ReactNode;
 	/**

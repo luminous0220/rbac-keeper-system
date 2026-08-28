@@ -1,5 +1,7 @@
 import dayjs from "dayjs";
 import type { Dayjs } from "dayjs";
+import { cloneDeep, isEqual } from "lodash";
+import type { FormInstance } from "antd";
 import type {
 	FormFieldItem,
 	FormValues,
@@ -246,6 +248,52 @@ export function isDisabled(field: FormFieldItem, values: FormValues): boolean {
 	}
 
 	return field.disabled(values);
+}
+
+/** 递归剔除对象中的 undefined（undefined 视为未设置，不参与修改判断） */
+function stripUndefined(value: unknown): unknown {
+	if (Array.isArray(value)) {
+		return value.map(stripUndefined);
+	}
+	if (value && typeof value === "object") {
+		const result: Record<string, unknown> = {};
+		for (const [key, val] of Object.entries(value as Record<string, unknown>)) {
+			if (val === undefined) continue;
+			result[key] = stripUndefined(val);
+		}
+		return result;
+	}
+	return value;
+}
+
+/**
+ * 判断表单当前值是否相对基线发生修改
+ * - 以 current 的字段集合为准：只比较两边都存在的字段，忽略仅存在于基线中的字段
+ * - 时间字段统一格式化为字符串后再比较（Dayjs / 字符串 / 时间戳 对齐为同一表示）
+ * - 不依赖 onValuesChange 事件：外部 setFieldValue/setFieldsValue（如树选择回填）也能被识别
+ * - 用于点击遮罩 / 关闭按钮时决定是否需要弹出“未保存修改”确认
+ */
+export function isFormDirty(
+	form: FormInstance,
+	baseline: Record<string, unknown>,
+	fields: ProFormFields,
+): boolean {
+	// 深拷贝当前值，避免格式化过程中的嵌套对象被意外修改
+	const current = cloneDeep(form.getFieldsValue()) as FormValues;
+	// 基线中的时间字段先转 Dayjs 再格式化为字符串，与表单当前值保持同一表示
+	const normalizedBase = formatTimeFields(
+		normalizeTimeFields(baseline, fields),
+		fields,
+	);
+	const formattedCurrent = formatTimeFields(current, fields);
+	const cleanCurrent = stripUndefined(formattedCurrent) as FormValues;
+	const cleanBase = stripUndefined(normalizedBase) as FormValues;
+	// 仅保留 current 中也存在的基线字段（如 current 有 a,b,c 而基线有 a,b,c,d，则忽略 d）
+	const filteredBase: FormValues = {};
+	for (const key of Object.keys(cleanCurrent)) {
+		if (key in cleanBase) filteredBase[key] = cleanBase[key];
+	}
+	return !isEqual(cleanCurrent, filteredBase);
 }
 
 /**

@@ -84,8 +84,6 @@ const UserPage: React.FC = () => {
 	const { message } = App.useApp();
 	const { hasPerm } = usePerms();
 	const tableRef = useRef<ProTableRef<IApi.UserItem>>(null);
-	const addFormRef = useRef<ProFormInstance>(null);
-	const editFormRef = useRef<ProFormInstance>(null);
 
 	const [deptTree, setDeptTree] = useState<IApi.DeptRaw[]>([]);
 	const [deptLoading, setDeptLoading] = useState(true);
@@ -173,205 +171,219 @@ const UserPage: React.FC = () => {
 		return options;
 	}, [deptTreeData]);
 
-	// ---- 新增用户 ----
-	const addFields: ProFormFields = [
-		{
-			type: "input",
-			label: "用户名",
-			name: "username",
-			fieldProps: { maxLength: 30, placeholder: "6-30 位字母或数字" },
-			rules: [
-				{ required: true, message: "请输入用户名" },
-				{ min: 6, max: 30, message: "用户名长度需为 6-30 位" },
-				{ pattern: /^[a-zA-Z0-9]+$/, message: "用户名只能包含字母和数字" },
-			],
-		},
-		{
-			type: "input-password",
-			label: "密码",
-			name: "password",
-			fieldProps: { placeholder: "8-32 位，需同时包含字母和数字" },
-			rules: [
-				{ required: true, message: "请输入密码" },
-				{ min: 8, max: 32, message: "密码长度需为 8-32 位" },
-				{
-					pattern: /^(?=.*[A-Za-z])(?=.*\d).{8,32}$/,
-					message: "密码需同时包含字母和数字",
+	// 1. 新增一个统一的 formRef
+	const formRef = useRef<ProFormInstance>(null);
+
+	// 2. 新增状态，用于区分是新增还是编辑，并存储当前编辑的用户数据
+	const [formMode, setFormMode] = useState<{
+		type: "add" | "edit";
+		record?: IApi.UserItem;
+	}>({ type: "add" });
+
+	// 3. 动态生成表单字段的函数
+	const getFormFields = useCallback((): ProFormFields => {
+		const isEdit = formMode.type === "edit";
+
+		const fields: ProFormFields = [
+			// --- 公共字段 ---
+			{
+				type: "input",
+				label: "昵称",
+				name: "nickname",
+				fieldProps: { maxLength: 30, placeholder: "请输入昵称" },
+				rules: [{ required: true, message: "请输入昵称" }],
+			},
+			{
+				type: "input",
+				label: "手机号",
+				name: "phone",
+				fieldProps: { maxLength: 11, placeholder: "请输入正确的手机号" },
+				rules: [{ pattern: /^1[3-9]\d{9}$/, message: "请输入正确的手机号" }],
+			},
+			{
+				type: "input",
+				label: "邮箱",
+				name: "email",
+				fieldProps: { maxLength: 50, placeholder: "请输入正确的邮箱" },
+				rules: [{ type: "email", message: "请输入正确的邮箱" }],
+			},
+			{
+				type: "radio",
+				label: "性别",
+				name: "sex",
+				fieldProps: { options: SEX_OPTIONS },
+			},
+			{
+				type: "tree-select",
+				label: "所属部门",
+				name: "deptId",
+				fieldProps: {
+					treeDefaultExpandAll: true,
+					treeData: deptTreeData,
+					placeholder: "请选择部门",
+					showSearch: true,
 				},
-			],
-		},
-		{
-			type: "input",
-			label: "昵称",
-			name: "nickname",
-			fieldProps: {
-				maxLength: 30,
-				placeholder: "请输入昵称",
+				rules: [{ required: true, message: "请选择部门" }],
 			},
-			rules: [{ required: true, message: "请输入昵称" }],
-		},
-		{
-			type: "input",
-			label: "手机号",
-			name: "phone",
-			fieldProps: { maxLength: 11, placeholder: "请输入正确的手机号" },
-			rules: [{ pattern: /^1[3-9]\d{9}$/, message: "请输入正确的手机号" }],
-		},
-		{
-			type: "input",
-			label: "邮箱",
-			name: "email",
-			fieldProps: { maxLength: 50, placeholder: "请输入正确的邮箱" },
-			rules: [{ type: "email", message: "请输入正确的邮箱" }],
-		},
-		{
-			type: "radio",
-			label: "性别",
-			name: "sex",
-			fieldProps: { options: SEX_OPTIONS }, // 默认值经 open({ initialValues }) 注入为 1（男）
-		},
-		{
-			type: "tree-select",
-			label: "所属部门",
-			name: "deptId",
-			fieldProps: {
-				treeDefaultExpandAll: true,
-				treeData: deptTreeData,
-				placeholder: "请选择部门",
-				showSearch: true,
-			},
-			rules: [{ required: true, message: "请选择部门" }],
-		},
-		{
-			type: "select",
-			label: "角色",
-			name: "roleKeys",
-			fieldProps: {
-				options: roleOptions,
-				mode: "multiple",
-				placeholder: "请选择角色（可多选）",
-			},
-			rules: [{ required: true, message: "请至少选择一个角色" }],
-		},
-		{
-			type: "textarea",
-			label: "备注",
-			name: "remark",
-			formItemProps: {
-				className: "col-span-2",
-			},
-			fieldProps: {
-				maxLength: 500,
-				rows: 3,
-				placeholder: "请输入备注（选填）",
-			},
-		},
-	];
-
-	const handleAddSubmit = useCallback(
-		async (_title: string, values: Record<string, any>) => {
-			await Api.addUser({
-				username: values.username,
-				password: values.password,
-				nickname: values.nickname ?? "",
-				phone: values.phone ?? "",
-				email: values.email ?? "",
-				sex: values.sex,
-				deptId: values.deptId,
-				roleKeys: values.roleKeys,
-				remark: values.remark ?? "",
-			});
-			message.success("新增用户成功");
-			tableRef.current?.refresh();
-		},
-		[message],
-	);
-
-	// ---- 编辑用户 ----
-	const editFields: ProFormFields = [
-		{
-			type: "input-password",
-			label: "密码",
-			name: "password",
-			fieldProps: { placeholder: "留空则不修改密码" },
-			// 可选字段：为空不校验，非空需满足后端复杂度
-			rules: [
-				{
-					validator: (_rule: any, value: string) => {
-						if (!value) return Promise.resolve();
-						if (value.length < 8 || value.length > 32) {
-							return Promise.reject(new Error("密码长度需为 8-32 位"));
-						}
-						if (!/(?=.*[A-Za-z])(?=.*\d)/.test(value)) {
-							return Promise.reject(new Error("密码需同时包含字母和数字"));
-						}
-						return Promise.resolve();
-					},
+			{
+				type: "select",
+				label: "角色",
+				name: "roleKeys",
+				fieldProps: {
+					options: roleOptions,
+					mode: "multiple",
+					placeholder: "请选择角色（可多选）",
 				},
-			],
-		},
-		{
-			type: "tree-select",
-			label: "所属部门",
-			name: "deptId",
-			fieldProps: {
-				treeDefaultExpandAll: true,
-				treeData: deptTreeData,
-				placeholder: "请选择部门",
-				showSearch: true,
+				rules: [{ required: true, message: "请至少选择一个角色" }],
 			},
-		},
-		{
-			type: "select",
-			label: "角色",
-			name: "roleKeys",
-			fieldProps: {
-				options: roleOptions,
-				mode: "multiple",
-				placeholder: "请选择角色（可多选）",
+			{
+				type: "textarea",
+				label: "备注",
+				name: "remark",
+				formItemProps: { className: "col-span-2" },
+				fieldProps: {
+					maxLength: 500,
+					rows: 3,
+					placeholder: "请输入备注（选填）",
+				},
 			},
-		},
-		{
-			type: "radio",
-			label: "状态",
-			name: "status",
-			fieldProps: { options: STATUS_OPTIONS },
-			rules: [{ required: true, message: "请选择状态" }],
-		},
-	];
+		];
 
+		// --- 根据模式插入特定字段 ---
+		if (!isEdit) {
+			// 新增模式：插入用户名和密码字段
+			fields.unshift(
+				{
+					type: "input",
+					label: "用户名",
+					name: "username",
+					fieldProps: { maxLength: 30, placeholder: "6-30 位字母或数字" },
+					rules: [
+						{ required: true, message: "请输入用户名" },
+						{ min: 6, max: 30, message: "用户名长度需为 6-30 位" },
+						{ pattern: /^[a-zA-Z0-9]+$/, message: "用户名只能包含字母和数字" },
+					],
+				},
+				{
+					type: "input-password",
+					label: "密码",
+					name: "password",
+					fieldProps: { placeholder: "8-32 位，需同时包含字母和数字" },
+					rules: [
+						{ required: true, message: "请输入密码" },
+						{ min: 8, max: 32, message: "密码长度需为 8-32 位" },
+						{
+							pattern: /^(?=.*[A-Za-z])(?=.*\d).{8,32}$/,
+							message: "密码需同时包含字母和数字",
+						},
+					],
+				},
+			);
+		} else {
+			// 编辑模式：插入密码（非必填）和状态字段
+			fields.unshift(
+				{
+					type: "input-password",
+					label: "密码",
+					name: "password",
+					fieldProps: { placeholder: "留空则不修改密码" },
+					rules: [
+						{
+							validator: (_rule: any, value: string) => {
+								if (!value) return Promise.resolve();
+								if (value.length < 8 || value.length > 32) {
+									return Promise.reject(new Error("密码长度需为 8-32 位"));
+								}
+								if (!/(?=.*[A-Za-z])(?=.*\d)/.test(value)) {
+									return Promise.reject(new Error("密码需同时包含字母和数字"));
+								}
+								return Promise.resolve();
+							},
+						},
+					],
+				},
+				{
+					type: "radio",
+					label: "状态",
+					name: "status",
+					fieldProps: { options: STATUS_OPTIONS },
+					rules: [{ required: true, message: "请选择状态" }],
+				},
+			);
+		}
+
+		return fields;
+	}, [formMode.type, deptTreeData, roleOptions]);
+
+	// 新增表单
+	const handleOpenAdd = useCallback(() => {
+		setFormMode({ type: "add" });
+		formRef.current?.open({
+			title: "新增用户",
+			initialValues: {
+				sex: 1, // 默认男
+				...(selectedDeptId ? { deptId: selectedDeptId } : {}),
+			},
+		});
+	}, [selectedDeptId]);
+
+	// 编辑表单
 	const openEdit = useCallback((record: IApi.UserItem) => {
-		editFormRef.current?.open({
+		setFormMode({ type: "edit", record });
+		formRef.current?.open({
 			title: `编辑用户：${record.username}`,
 			initialValues: {
 				password: "",
 				deptId: record.dept?.id,
 				roleKeys: record.roles?.map((r) => r.role_key) ?? [],
 				status: record.status,
+				nickname: record.nickname,
+				phone: record.phone,
+				email: record.email,
+				sex: record.sex,
 			},
-			extraParams: { username: record.username },
+			extraParams: { username: record.username }, // 将 username 存入 extraParams 以便提交时使用
 		});
 	}, []);
 
-	const handleEditSubmit = useCallback(
+	// 提交处理函数
+	const handleFormSubmit = useCallback(
 		async (
 			_title: string,
 			values: Record<string, any>,
 			extraParams?: Record<string, any>,
 		) => {
-			const username = extraParams?.username as string;
-			const body: IApi.UserEditReq = {
-				deptId: values.deptId,
-				roleKeys: values.roleKeys ?? [],
-				status: values.status,
-			};
-			// 密码为空则不传（后端 nil=不改）
-			if (values.password) body.password = values.password;
-			await Api.editUser(username, body);
-			message.success("修改成功");
+			if (formMode.type === "add") {
+				// --- 新增逻辑 ---
+				await Api.addUser({
+					username: values.username,
+					password: values.password,
+					nickname: values.nickname ?? "",
+					phone: values.phone ?? "",
+					email: values.email ?? "",
+					sex: values.sex,
+					deptId: values.deptId,
+					roleKeys: values.roleKeys,
+					remark: values.remark ?? "",
+				});
+				message.success("新增用户成功");
+			} else {
+				// --- 编辑逻辑 ---
+				const username = extraParams?.username as string;
+				const body: IApi.UserEditReq = {
+					deptId: values.deptId,
+					roleKeys: values.roleKeys ?? [],
+					status: values.status,
+				};
+				if (values.password) body.password = values.password;
+
+				await Api.editUser(username, body);
+				message.success("修改成功");
+			}
+
 			tableRef.current?.refresh();
 		},
-		[message],
+		[formMode.type, message], // 依赖项中加入 formMode.type
 	);
 
 	// ---- 列配置 ----
@@ -395,11 +407,6 @@ const UserPage: React.FC = () => {
 				title: "部门",
 				dataIndex: "dept",
 				width: 120,
-				filters: deptFlatenOptions.map((item) => ({
-					text: item.text,
-					value: item.value,
-				})),
-				onFilter: (value, record) => record.dept?.id == value,
 				render: (_, record) => record.dept?.dept_name ?? "-",
 			},
 			{
@@ -409,8 +416,9 @@ const UserPage: React.FC = () => {
 					text: item.label,
 					value: item.value,
 				})),
-				onFilter: (value, record) =>
-					record.roles?.some((role) => role.role_key === value),
+				onFilter: (value, record) => {
+					return record.roles?.some((role) => role.role_key === value);
+				},
 				render: (_, record) =>
 					record.roles?.length ? (
 						<Space size={4} wrap>
@@ -445,13 +453,19 @@ const UserPage: React.FC = () => {
 					text: item.label,
 					value: item.value,
 				})),
+				onFilter: (value, record) => record.sex == value,
+
 				render: (value) => SEX_TEXT[(value as number) ?? 0] ?? "未知",
 			},
 			{
 				title: "状态",
 				dataIndex: "status",
 				width: 80,
-				onFilter: (value, record) => record.sex == value,
+				filters: STATUS_OPTIONS.map((item) => ({
+					text: item.label,
+					value: item.value,
+				})),
+				onFilter: (value, record) => record.status == value,
 				render: (value) => (
 					<Tag color={(value as number) === 1 ? "green" : "red"}>
 						{STATUS_TEXT[(value as number) ?? 0] ?? "-"}
@@ -521,22 +535,13 @@ const UserPage: React.FC = () => {
 			toolbarExtra: !hasPerm("system:user:add") ? undefined : (
 				<Button
 					type="primary"
-					onClick={() =>
-						addFormRef.current?.open({
-							title: "新增用户",
-							initialValues: {
-								sex: 1, // 默认男
-								// 左侧选中了部门时预填所属部门
-								...(selectedDeptId ? { deptId: selectedDeptId } : {}),
-							},
-						})
-					}
+					onClick={handleOpenAdd} // 改为调用新的 handleOpenAdd
 				>
 					新增用户
 				</Button>
 			),
 		};
-	}, [columns, externalParams, hasPerm, selectedDeptId]);
+	}, [columns, externalParams, hasPerm, handleOpenAdd]);
 
 	return (
 		<>
@@ -549,10 +554,7 @@ const UserPage: React.FC = () => {
 					loading={deptLoading}
 					extra={
 						<Tooltip title="刷新">
-							<Button
-								icon={<ReloadOutlined />}
-								onClick={fetchDeptTree}
-							/>
+							<Button icon={<ReloadOutlined />} onClick={fetchDeptTree} />
 						</Tooltip>
 					}
 					styles={{
@@ -591,20 +593,12 @@ const UserPage: React.FC = () => {
 					<ProTable<IApi.UserItem> ref={tableRef} {...tableProps} />
 				</div>
 			</div>
-			{/* 新增用户弹窗 */}
 			<ProForm
 				className={"grid grid-cols-2 gap-4"}
-				ref={addFormRef}
-				fields={addFields}
-				onConfirm={handleAddSubmit}
+				ref={formRef}
+				fields={getFormFields()} // 使用动态生成的字段
+				onConfirm={handleFormSubmit} // 使用合并后的提交函数
 				width={600}
-			/>
-			{/* 编辑用户弹窗 */}
-			<ProForm
-				ref={editFormRef}
-				fields={editFields}
-				onConfirm={handleEditSubmit}
-				width={560}
 			/>
 		</>
 	);
