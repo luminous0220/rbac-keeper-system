@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Drawer, Layout, theme } from "antd";
-import { useOutlet, useLocation } from "react-router";
-import { AnimatePresence, motion } from "framer-motion";
+import { useOutlet } from "react-router";
+// import { AnimatePresence, motion } from "framer-motion";
 import { useGlobalStore } from "@/stores";
 import { TopHeader } from "./TopHeader/TopHeader";
 import { Side } from "./Side";
@@ -14,7 +14,7 @@ export const BaseLayout: React.FC = () => {
 	} = theme.useToken();
 
 	const isMobile = useGlobalStore((s) => s.isMobile);
-	const location = useLocation();
+	// const location = useLocation();
 	const outlet = useOutlet();
 
 	const [collapsed, setCollapsed] = useState(false);
@@ -24,7 +24,6 @@ export const BaseLayout: React.FC = () => {
 
 	const sidebarWidth = 256;
 	const sidebarCollapsedWidth = 88;
-
 
 	return (
 		<Layout className="size-full overflow-x-hidden flex flex-row">
@@ -60,6 +59,17 @@ export const BaseLayout: React.FC = () => {
 				<TopHeader collapsed={collapsed} setCollapsed={setCollapsed} />
 
 				<Content className="relative size-full">
+					<div
+						className="size-full overflow-y-auto p-2 md:px-4 md:pb-4 pb-0!"
+						style={{
+							borderRadius: borderRadiusLG,
+						}}
+					>
+						{outlet}
+					</div>
+				</Content>
+
+				{/* <Content className="relative size-full">
 					<AnimatePresence initial={true} mode="wait">
 						<motion.div
 							key={location.pathname}
@@ -75,7 +85,7 @@ export const BaseLayout: React.FC = () => {
 							{outlet}
 						</motion.div>
 					</AnimatePresence>
-				</Content>
+				</Content> */}
 			</Layout>
 		</Layout>
 	);

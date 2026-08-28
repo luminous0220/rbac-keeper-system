@@ -356,6 +356,7 @@ export const ProForm = forwardRef<ProFormInstance, ProFormProps>(
 				<Form
 					form={form}
 					initialValues={normalizedInitialValues}
+					size="large"
 					className={isInlineMode ? "flex gap-x-2 gap-y-3" : ""}
 					{...formProps}
 					layout={layout}

@@ -11,7 +11,6 @@ import {
 	App,
 } from "antd";
 import { CollapseButton, CollapseProps } from "./CollapseButton";
-import { Setting } from "./Setting";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useAuthStore } from "@/stores";
 import { IconUser, IconKey, IconLogout, IconSearch } from "@tabler/icons-react";
@@ -22,6 +21,7 @@ import type { MenuProps } from "antd";
 import type { IApi } from "@/apis";
 import { useMemo, useState } from "react";
 import { Api } from "@/apis";
+import { Setting } from "./Setting";
 
 interface TopHeaderProps extends CollapseProps {
 	className?: string;
@@ -196,7 +196,11 @@ export const TopHeader = ({ setCollapsed, collapsed }: TopHeaderProps) => {
 
 	// 角色标签：最多展示 3 个，超出折叠为 +N
 	const roleTags = (userInfo?.roles ?? []).slice(0, 3).map((role) => (
-		<Tag key={role.role_key} color="blue" className="!m-0 hidden md:inline-flex">
+		<Tag
+			key={role.role_key}
+			color="blue"
+			className="!m-0 hidden md:inline-flex"
+		>
 			{role.role_name}
 		</Tag>
 	));
@@ -218,7 +222,7 @@ export const TopHeader = ({ setCollapsed, collapsed }: TopHeaderProps) => {
 					<CollapseButton collapsed={collapsed} setCollapsed={setCollapsed} />
 
 					<AutoComplete
-						className="max-w-64 max-md:hidden"
+						className="max-w-64 max-md:hidden h-[32px]"
 						options={searchOptions}
 						showSearch={{ onSearch: setSearchText }}
 						onSelect={handleSearchSelect}
@@ -229,7 +233,7 @@ export const TopHeader = ({ setCollapsed, collapsed }: TopHeaderProps) => {
 						getPopupContainer={(trigger) => trigger.parentElement!}
 					>
 						<Input
-							className="h-[32px] w-[256px]"
+							className="w-[326px] h-[32px]"
 							placeholder="搜索菜单..."
 							prefix={
 								<IconSearch size={14} stroke={1.5} className="text-gray-400" />
@@ -239,6 +243,8 @@ export const TopHeader = ({ setCollapsed, collapsed }: TopHeaderProps) => {
 							onBlur={() => setInputFocused(false)}
 						/>
 					</AutoComplete>
+
+					<Breadcrumb className="shrink-0 max-md:hidden" items={breadcrumbItems} />
 				</div>
 
 				{/* 右侧：主题切换 + 系统设置 + 用户头像/角色标签 */}
@@ -270,7 +276,6 @@ export const TopHeader = ({ setCollapsed, collapsed }: TopHeaderProps) => {
 					</Dropdown>
 				</div>
 			</Header>
-			<Breadcrumb className="mt-4 mb-2 shrink-0" items={breadcrumbItems} />
 		</div>
 	);
 };

@@ -41,17 +41,17 @@ const SEX_OPTIONS = [
 ];
 
 const presets = [
-	"orange",
+	"blue",
+	"green",
 	"volcano",
+	"gold",
+	"purple",
+	"orange",
 	"cyan",
 	"lime",
 	"magenta",
 	"red",
-	"gold",
-	"green",
-	"blue",
 	"geekblue",
-	"purple",
 ];
 
 /** 部门树 → antd TreeSelect 数据结构 */

@@ -16,6 +16,8 @@ import type { ProFormFields, ProFormInstance } from "@/components/ProForm";
 import { Api, IApi } from "@/apis";
 import { usePerms } from "@/hooks";
 import dayjs from "dayjs";
+import IconSelect from "@/components/IconSelect";
+import { IconMap } from "@/libs";
 
 // 菜单类型：M目录 C菜单 F按钮（与 model.Menu.menu_type 一致）
 const MENU_TYPE_OPTIONS = [
@@ -35,10 +37,10 @@ const MENU_STATUS_OPTIONS = [
 	{ label: "停用", value: 0 },
 ];
 // 显示状态：0显示 1隐藏
-const VISIBLE_TEXT: Record<number, string> = { 0: "显示", 1: "隐藏" };
+const VISIBLE_TEXT: Record<number, string> = { 1: "显示", 0: "隐藏" };
 const VISIBLE_OPTIONS = [
-	{ label: "显示", value: 0 },
-	{ label: "隐藏", value: 1 },
+	{ label: "显示", value: 1 },
+	{ label: "隐藏", value: 0 },
 ];
 // 权限标识三段式：模块:实体:动作（与后端 validateMenuPerms 一致）
 const PERMS_RE = /^[a-z][a-z0-9_]*:[a-z][a-z0-9_]*:[a-z][a-z0-9_]*$/;
@@ -98,11 +100,13 @@ function buildMenuFields(
 			type: "radio",
 			label: "菜单类型",
 			name: "menuType",
+			disabled: menuTypeDisabled,
 			fieldProps: {
+				block: true,
 				options: MENU_TYPE_OPTIONS,
 				optionType: "button",
 				buttonStyle: "solid",
-				disabled: menuTypeDisabled,
+				disabled: true,
 			},
 			rules: [{ required: true, message: "请选择菜单类型" }],
 		},
@@ -142,12 +146,17 @@ function buildMenuFields(
 			fieldProps: { min: 0, style: { width: "100%" } },
 		},
 		{
-			type: "input",
 			label: "图标",
 			name: "icon",
-			fieldProps: {
-				maxLength: 100,
-				placeholder: "图标名称，如 user / system（选填）",
+			render: (value: string, form) => {
+				return (
+					<IconSelect
+						value={value}
+						onChange={(v) => {
+							form.setFieldValue("icon", v);
+						}}
+					/>
+				);
 			},
 			visible: (values) => values.menuType !== "F",
 		},
@@ -390,7 +399,21 @@ const MenuPage: React.FC = () => {
 
 	// ---- 列配置 ----
 	const columns: ProTableColumnType<IApi.MenuRaw>[] = [
-		{ title: "菜单名称", dataIndex: "menu_name", width: 200 },
+		{
+			title: "菜单名称",
+			dataIndex: "menu_name",
+			render: (v, record) => (
+				<div className="flex-center gap-2">
+					{record.icon && (
+						<span className="flex items-center text-base p-2 bg-[#EBF7FF] rounded-lg text-[var(--p)] dark:bg-[#070D10]">
+							{IconMap[record.icon]}
+						</span>
+					)}
+					<span>{v}</span>
+				</div>
+			),
+			width: 200,
+		},
 		{
 			title: "类型",
 			dataIndex: "menu_type",
@@ -413,20 +436,26 @@ const MenuPage: React.FC = () => {
 			title: "路由地址",
 			dataIndex: "path",
 			width: 130,
-			render: (value) => (value ? String(value) : "-"),
+			render: (value) =>
+				value ? <Typography.Text code>{value as string}</Typography.Text> : "-",
 		},
 		{
 			title: "组件路径",
 			dataIndex: "component",
 			width: 190,
 			ellipsis: true,
-			render: (value) => (value ? String(value) : "-"),
+			render: (value) =>
+				value ? <Typography.Text code>{value as string}</Typography.Text> : "-",
 		},
 		{
 			title: "可见",
 			dataIndex: "visible",
 			width: 70,
-			render: (value) => VISIBLE_TEXT[(value as number) ?? 0] ?? "-",
+			render: (value) => (
+				<Tag color={(value as number) === 1 ? "green" : "red"}>
+					{VISIBLE_TEXT[(value as number) ?? 0] ?? "-"}
+				</Tag>
+			),
 		},
 		{
 			title: "状态",
@@ -510,17 +539,17 @@ const MenuPage: React.FC = () => {
 			/>
 			{/* 新增菜单弹窗（三 Tab：目录/菜单/按钮） */}
 			<ProForm
+				type="drawer"
 				ref={addFormRef}
 				fields={addFields}
 				onConfirm={handleAdd}
-				width={640}
 			/>
 			{/* 编辑菜单弹窗（menuType 置灰不可切换） */}
 			<ProForm
+				type="drawer"
 				ref={editFormRef}
 				fields={editFields}
 				onConfirm={handleEdit}
-				width={640}
 			/>
 		</>
 	);

@@ -64,7 +64,7 @@ type BaseFieldConfig = {
 	disabled?: boolean | ((values: FormValues) => boolean);
 	visible?: boolean | ((values: FormValues) => boolean);
 	shouldUpdate?: boolean | ((prev: FormValues, curr: FormValues) => boolean);
-	render?: (value: unknown, form: FormInstance) => ReactNode;
+	render?: (value: any, form: FormInstance) => ReactNode;
 	/** Form.Item 的额外配置 */
 	formItemProps?: FormItemProps;
 };
@@ -78,7 +78,7 @@ type TypedFieldConfig<T extends ComponentType> = BaseFieldConfig & {
 /** 无 type 的自定义渲染字段配置 */
 type CustomFieldConfig = BaseFieldConfig & {
 	type?: undefined;
-	render: (value: unknown, form: FormInstance) => ReactNode;
+	render: (value: any, form: FormInstance) => ReactNode;
 };
 
 /** 完整字段配置类型 */
