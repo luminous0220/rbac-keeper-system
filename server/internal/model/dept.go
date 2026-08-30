@@ -10,7 +10,7 @@ type Dept struct {
 	Leader   string `gorm:"size:20;comment:负责人" json:"leader"`
 	Phone    string `gorm:"size:11;comment:联系电话" json:"phone"`
 	Email    string `gorm:"size:50;comment:邮箱" json:"email"`
-	Status   int8   `gorm:"default:0;comment:状态 0正常 1停用" json:"status"`
+	Status   int8   `gorm:"default:0;comment:状态 0停用 1正常 " json:"status"`
 	Remark   string `gorm:"size:500;comment:备注" json:"remark"`
 	// 关联关系：自关联子部门
 	Children []*Dept `gorm:"foreignKey:ParentID" json:"children"`

@@ -22,11 +22,6 @@ export interface AuthState {
 // Auth Actions
 interface AuthActions {
 	setUserInfo: (info: IApi.UserInfoResp | null) => void;
-	setMenus: (menus: IApi.MenuRaw[]) => void;
-	setPerms: (perms: string[]) => void;
-	setRoleKeys: (roleKeys: string[]) => void;
-	setDataScope: (dataScope: number) => void;
-	setDepts: (depts: IApi.DeptRaw[]) => void;
 	setAuthData: (partial: Partial<AuthState>) => void;
 	setIsOnline: (status: boolean) => void;
 	resetAuth: () => void;
@@ -48,16 +43,6 @@ export const useAuthStore = create<AuthState & AuthActions>()(
 			...initialAuthState,
 
 			setUserInfo: (info) => set({ userInfo: info }),
-
-			setMenus: (menus) => set({ menus }),
-
-			setPerms: (perms) => set({ perms }),
-
-			setRoleKeys: (roleKeys) => set({ roleKeys }),
-
-			setDataScope: (dataScope) => set({ dataScope }),
-
-			setDepts: (depts) => set({ depts }),
 
 			setAuthData: (partial) => set(partial),
 

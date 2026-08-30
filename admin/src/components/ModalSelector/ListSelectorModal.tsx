@@ -14,7 +14,7 @@ import { SelectedPanel } from "./components/SelectedPanel";
 import { SelectorFooter } from "./components/SelectorFooter";
 import type {
 	ListItemData,
-	ListSelectorNode,
+	SelectedItem,
 	ListSelectorApi,
 	ListSelectorModalOpenProps,
 	ListSelectorModalRef,
@@ -46,7 +46,9 @@ function ListSelectorModalInner(
 	const [isOpen, setIsOpen] = useState(false);
 	const [searchText, setSearchText] = useState("");
 	// 已选项列表（单一状态源，跨页保留）
-	const [selectedItems, setSelectedItems] = useState<ListSelectorNode[]>([]);
+	// 存的是 ListItemData[] 而非单纯 key[]，因为 SelectedPanel 需要 title/desc 展示。
+	// 外部通过 ref.open({ checkedKeys }) 传入的简单 key 列表，由 open() 内部从 data 查找后回填。
+	const [selectedItems, setSelectedItems] = useState<ListItemData[]>([]);
 	const [data, setData] = useState<ListItemData[]>([]);
 	const [total, setTotal] = useState(0);
 	const [page, setPage] = useState(1);
@@ -131,7 +133,7 @@ function ListSelectorModalInner(
 
 	const handleClearAll = useCallback(() => setSelectedItems([]), []);
 
-	const removeSelectedItem = useCallback((item: ListSelectorNode) => {
+	const removeSelectedItem = useCallback((item: SelectedItem) => {
 		setSelectedItems((prev) => prev.filter((s) => s.value !== item.value));
 	}, []);
 
@@ -168,7 +170,23 @@ function ListSelectorModalInner(
 		(props: ListSelectorModalOpenProps) => {
 			setModalTitle(props.title ?? defaultTitle);
 			setSearchText("");
-			setSelectedItems(props.checkedKeys ?? []);
+
+			// 恢复已选状态：checkedKeys 是简单 key 列表
+			// - 提供了静态 data 时：从中查找 title/desc 拼回 ListItemData 用于 SelectedPanel 展示
+			// - 仅有 checkedKeys 时：保留旧的 selectedItems（可能是上一轮缓存）；否则清空
+			if (props.checkedKeys?.length && props.data?.length) {
+				const dataMap = new Map(props.data.map((d) => [d.value, d]));
+				setSelectedItems(
+					props.checkedKeys
+						.map((k) => dataMap.get(k))
+						.filter((d): d is ListItemData => !!d),
+				);
+			} else if (props.checkedKeys === undefined) {
+				setSelectedItems([]);
+			}
+			// props.checkedKeys 存在但 props.data 不存在时：保留旧 selectedItems 不动
+			// （Modal 不会主动重置，避免丢失用户已选但当前页未加载的项）
+
 			setIsOpen(true);
 
 			// 优先使用静态数据，其次使用 api 获取

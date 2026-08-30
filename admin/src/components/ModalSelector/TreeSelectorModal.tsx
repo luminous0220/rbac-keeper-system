@@ -17,6 +17,7 @@ import type {
 	TreeSelectorNode,
 	SelectedItem,
 	TreeSelectorApi,
+	TreeSelectorKey,
 	TreeSelectorModalOpenProps,
 	TreeSelectorModalRef,
 	TreeSelectorModalProps,
@@ -24,16 +25,12 @@ import type {
 import {
 	getDescendantKeys,
 	findNode,
-	findParentNode,
 	filterTree,
 	getMatchedAncestorKeys,
 	buildSelectedFromKeys,
 	getAncestorKeys,
 } from "./utils";
-import {
-	CaretDownOutlined,
-	CaretRightOutlined,
-} from "@ant-design/icons";
+import { CaretDownOutlined, CaretRightOutlined } from "@ant-design/icons";
 export type {
 	TreeSelectorModalOpenProps,
 	TreeSelectorModalRef,
@@ -114,15 +111,14 @@ function TreeSelectorModalInner(
 	}, []);
 
 	const handleConfirm = useCallback(() => {
-		const selected = buildSelectedFromKeys(modalCheckedKeys, treeData);
-		onConfirm?.(selected);
+		onConfirm?.(modalCheckedKeys as TreeSelectorKey[]);
 		setIsOpen(false);
 		setSearchText("");
-	}, [modalCheckedKeys, treeData, onConfirm]);
+	}, [modalCheckedKeys, onConfirm]);
 
 	/**
 	 * 纯函数：在 currentKeys 基础上勾选/取消 key，返回新的 keys。
-	 * 勾选时联动选中子孙与祖先，取消时按「父节点仅在无其他已选子节点时才取消」的规则回退。
+	 * 勾选时联动选中子孙与祖先。
 	 * 勾选框与 label 点击共用此逻辑，保证二者行为一致。
 	 */
 	const applyCheck = useCallback(
@@ -141,50 +137,53 @@ function TreeSelectorModalInner(
 					if (!newKeys.includes(ak)) newKeys.push(ak);
 				}
 			} else {
-				const nodeData = findNode(treeData, key);
-				if (nodeData?.children?.length) {
-					// 取消父节点 → 同时取消所有子孙节点
-					const descendantKeys = getDescendantKeys(treeData, key);
-					newKeys = newKeys.filter((k) => !descendantKeys.includes(k));
-					// 检查祖先：如果当前父节点被取消后祖先无任何已选子节点，则取消祖先
-					const ancestorKeys = getAncestorKeys(treeData, key);
-					for (const ak of ancestorKeys) {
-						const akNode = findNode(treeData, ak);
-						if (akNode?.children) {
-							const hasCheckedChild = akNode.children.some((c) =>
-								newKeys.includes(c.value),
-							);
-							if (!hasCheckedChild) {
-								newKeys = newKeys.filter((k) => k !== ak);
-							}
-						}
-					}
-				} else {
-					// 取消叶子节点
-					const parent = findParentNode(treeData, key);
-					if (parent) {
-						// 仅当父节点下无任何其他已选兄弟时，才取消父节点
-						const siblingsChecked = parent.children!.some(
-							(c) => c.value !== key && newKeys.includes(c.value),
-						);
-						if (!siblingsChecked) {
-							newKeys = newKeys.filter((k) => k !== parent.value);
-							// 继续向上检查祖先
-							const ancestorKeys = getAncestorKeys(treeData, parent.value);
-							for (const ak of ancestorKeys) {
-								const akNode = findNode(treeData, ak);
-								if (akNode?.children) {
-									const hasCheckedChild = akNode.children.some((c) =>
-										newKeys.includes(c.value),
-									);
-									if (!hasCheckedChild) {
-										newKeys = newKeys.filter((k) => k !== ak);
-									}
-								}
-							}
-						}
-					}
-				}
+				// const nodeData = findNode(treeData, key);
+
+				const descendantKeys = getDescendantKeys(treeData, key);
+				newKeys = newKeys.filter((k) => !descendantKeys.includes(k));
+				// if (nodeData?.children?.length) {
+				// 	// 取消父节点 → 同时取消所有子孙节点
+				// 	const descendantKeys = getDescendantKeys(treeData, key);
+				// 	newKeys = newKeys.filter((k) => !descendantKeys.includes(k));
+				// 	// 检查祖先：如果当前父节点被取消后祖先无任何已选子节点，则取消祖先
+				// 	const ancestorKeys = getAncestorKeys(treeData, key);
+				// 	for (const ak of ancestorKeys) {
+				// 		const akNode = findNode(treeData, ak);
+				// 		if (akNode?.children) {
+				// 			const hasCheckedChild = akNode.children.some((c) =>
+				// 				newKeys.includes(c.value),
+				// 			);
+				// 			if (!hasCheckedChild) {
+				// 				newKeys = newKeys.filter((k) => k !== ak);
+				// 			}
+				// 		}
+				// 	}
+				// } else {
+				// 	// 取消叶子节点
+				// 	const parent = findParentNode(treeData, key);
+				// 	if (parent) {
+				// 		// 仅当父节点下无任何其他已选兄弟时，才取消父节点
+				// 		const siblingsChecked = parent.children!.some(
+				// 			(c) => c.value !== key && newKeys.includes(c.value),
+				// 		);
+				// 		if (!siblingsChecked) {
+				// 			newKeys = newKeys.filter((k) => k !== parent.value);
+				// 			// 继续向上检查祖先
+				// 			const ancestorKeys = getAncestorKeys(treeData, parent.value);
+				// 			for (const ak of ancestorKeys) {
+				// 				const akNode = findNode(treeData, ak);
+				// 				if (akNode?.children) {
+				// 					const hasCheckedChild = akNode.children.some((c) =>
+				// 						newKeys.includes(c.value),
+				// 					);
+				// 					if (!hasCheckedChild) {
+				// 						newKeys = newKeys.filter((k) => k !== ak);
+				// 					}
+				// 				}
+				// 			}
+				// 		}
+				// 	}
+				// }
 			}
 			return newKeys;
 		},
@@ -333,9 +332,9 @@ function TreeSelectorModalInner(
 			setModalTitle(props.title ?? defaultTitle);
 			setSearchText("");
 
-			// 恢复已选状态
+			// 恢复已选状态：checkedKeys 现在是简单 key 列表，直接使用
 			if (props.checkedKeys?.length) {
-				setModalCheckedKeys(props.checkedKeys.map((item) => item.value));
+				setModalCheckedKeys(props.checkedKeys as React.Key[]);
 			} else {
 				setModalCheckedKeys([]);
 			}
@@ -393,7 +392,6 @@ function TreeSelectorModalInner(
 											size="small"
 											disabled={allParentKeys.length === 0}
 											onClick={handleToggleExpandAll}
-												
 										>
 											{isAllExpanded ? (
 												<CaretDownOutlined />

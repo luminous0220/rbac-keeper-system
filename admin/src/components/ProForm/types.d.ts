@@ -60,7 +60,11 @@ type FieldPropsMap = {
 type BaseFieldConfig = {
 	label?: string;
 	name?: string | string[];
-	rules?: Rule[];
+	/**
+	 * 校验规则。支持函数式（按当前表单值动态计算），
+	 * 例如“仅当某字段满足条件时才校验”——返回空数组即可关闭校验。
+	 */
+	rules?: Rule[]
 	disabled?: boolean | ((values: FormValues) => boolean);
 	visible?: boolean | ((values: FormValues) => boolean);
 	shouldUpdate?: boolean | ((prev: FormValues, curr: FormValues) => boolean);
@@ -109,7 +113,7 @@ type ProFormCollapseConfig = {
 
 /** ProForm 组件 Props */
 
-type ProFormProps = Omit<FormProps, "fields" | "title" | "onFinish"> & {
+type ProFormProps = Omit<FormProps, "fields" | "title"> & {
 	title?: React.ReactNode;
 	className?: string;
 	/** 字段配置数组 */

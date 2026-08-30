@@ -77,7 +77,7 @@ export namespace IApi {
 		email: string;
 		sex: number; // 0未知 1男 2女
 		avatar: string;
-		status: number; // 0正常 1停用
+		status: number; // 0停用 1正常 
 		loginIp: string;
 		dept: BriefDept | null;
 		roles: BriefRole[];
@@ -172,7 +172,7 @@ export namespace IApi {
 		status: number;
 		perms: string;
 		icon: string;
-		visible: number; // 0显示 1隐藏
+		visible: number; // 0隐藏 1显示 
 		remark: string;
 		children?: MenuRaw[];
 		createdAt: string;
@@ -213,7 +213,7 @@ export namespace IApi {
 
 	// ==================== 部门 ====================
 
-	/** 原始 model.Dept（/dept/tree 返回；snake_case；status：0正常 1停用） */
+	/** 原始 model.Dept（/dept/tree 返回；snake_case；status：0停用 1正常 ） */
 	interface DeptRaw {
 		id: number;
 		dept_name: string;
@@ -254,7 +254,7 @@ export namespace IApi {
 
 	// ==================== 字典 ====================
 
-	/** 原生 model.DictType（status：0正常 1停用） */
+	/** 原生 model.DictType（status：0停用 1正常 ） */
 	interface DictTypeItem {
 		id: number;
 		dict_name: string;
@@ -278,7 +278,7 @@ export namespace IApi {
 		status?: number;
 	}
 
-	/** 原生 model.DictData（status：0正常 1停用） */
+	/** 原生 model.DictData（status：0停用 1正常 ） */
 	interface DictDataItem {
 		id: number;
 		dict_sort: number;

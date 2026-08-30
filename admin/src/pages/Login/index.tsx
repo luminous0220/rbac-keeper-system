@@ -113,67 +113,6 @@ export default function Login() {
 		},
 	});
 
-	// 表单配置
-	const formItems: FormFieldItem[] = [
-		{
-			name: "username",
-			label: "账号",
-			type: "input",
-			rules: ["required"],
-			formItemProps: { rules: [{ required: true, message: "请输入用户名" }] },
-			fieldProps: {
-				prefix: (
-					<span className="flex items-center text-base p-2 bg-[#EBF7FF] rounded-lg text-[var(--p)] dark:bg-[#070D10]">
-						<UserOutlined />
-					</span>
-				),
-				placeholder: "请输入用户名",
-			},
-		},
-		{
-			name: "password",
-			label: "密码",
-			type: "input-password",
-			formItemProps: { rules: [{ required: true, message: "请输入密码" }] },
-			fieldProps: {
-				prefix: (
-					<span className="flex items-center text-base p-2 bg-[#EBF7FF] rounded-lg text-[var(--p)] dark:bg-[#070D10]">
-						<LockOutlined />
-					</span>
-				),
-				placeholder: "请输入密码",
-			},
-		},
-		{
-			name: "captchaValue",
-			label: "验证码",
-			formItemProps: { rules: [{ required: true, message: "请输入验证码" }] },
-			// 自定义渲染：输入框 + 可点击刷新的验证码图片
-			render: (value, form) => (
-				<div className="flex gap-2">
-					<Input
-						placeholder="请输入验证码"
-						maxLength={4}
-						prefix={
-							<span className="flex items-center text-base p-2 bg-[#EBF7FF] rounded-lg text-[var(--p)] dark:bg-[#070D10]">
-								<SafetyOutlined />
-							</span>
-						}
-						value={(value as string) ?? ""}
-						onChange={(e) => form.setFieldValue("captchaValue", e.target.value)}
-					/>
-					<img
-						src={captchaImg}
-						alt="验证码"
-						title="点击刷新验证码"
-						onClick={refreshCaptcha}
-						className="h-10 w-[120px] shrink-0 cursor-pointer rounded border border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800"
-					/>
-				</div>
-			),
-		},
-	];
-
 	// 提交登录
 	const handleSubmit = async () => {
 		try {
@@ -195,8 +134,8 @@ export default function Login() {
 			}
 
 			loginMutation.mutate({
-				username: values?.username,
-				password: values?.password,
+				username: values?.username.trim(),
+				password: values?.password.trim(),
 				captchaId,
 				captchaValue: values?.captchaValue,
 			});
@@ -205,6 +144,70 @@ export default function Login() {
 			fullLoading(false);
 		}
 	};
+
+	// 表单配置
+	const formItems: FormFieldItem[] = [
+		{
+			name: "username",
+			label: "账号",
+			type: "input",
+			rules: ["required"],
+			formItemProps: { rules: [{ required: true, message: "请输入用户名" }] },
+			fieldProps: {
+				prefix: (
+					<span className="flex items-center text-base p-2 bg-[#EBF7FF] rounded-lg text-[var(--p)] dark:bg-[#070D10]">
+						<UserOutlined />
+					</span>
+				),
+				placeholder: "请输入用户名",
+				onPressEnter: handleSubmit,
+			},
+		},
+		{
+			name: "password",
+			label: "密码",
+			type: "input-password",
+			formItemProps: { rules: [{ required: true, message: "请输入密码" }] },
+			fieldProps: {
+				prefix: (
+					<span className="flex items-center text-base p-2 bg-[#EBF7FF] rounded-lg text-[var(--p)] dark:bg-[#070D10]">
+						<LockOutlined />
+					</span>
+				),
+				placeholder: "请输入密码",
+				onPressEnter: handleSubmit,
+			},
+		},
+		{
+			name: "captchaValue",
+			label: "验证码",
+			formItemProps: { rules: [{ required: true, message: "请输入验证码" }] },
+			// 自定义渲染：输入框 + 可点击刷新的验证码图片
+			render: (value, form) => (
+				<div className="flex gap-2">
+					<Input
+						placeholder="请输入验证码"
+						maxLength={4}
+						prefix={
+							<span className="flex items-center text-base p-2 bg-[#EBF7FF] rounded-lg text-[var(--p)] dark:bg-[#070D10]">
+								<SafetyOutlined />
+							</span>
+						}
+						value={(value as string) ?? ""}
+						onChange={(e) => form.setFieldValue("captchaValue", e.target.value)}
+						onPressEnter={handleSubmit}
+					/>
+					<img
+						src={captchaImg}
+						alt="验证码"
+						title="点击刷新验证码"
+						onClick={refreshCaptcha}
+						className="h-10 w-[120px] shrink-0 cursor-pointer rounded border border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800"
+					/>
+				</div>
+			),
+		},
+	];
 
 	// 主题切换
 	const handleThemeChange = () => {

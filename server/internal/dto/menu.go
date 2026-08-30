@@ -12,8 +12,8 @@ type MenuTreeNode struct {
 	Path      string         `json:"path"`
 	Component string         `json:"component"`
 	Query     string         `json:"query"`
-	Visible   int8           `json:"visible"` // 0显示 1隐藏
-	Status    int8           `json:"status"`  // 0正常 1停用
+	Visible   int8           `json:"visible"` // 0隐藏 1显示
+	Status    int8           `json:"status"`  // 0停用 1正常
 	Perms     string         `json:"perms"`
 	Icon      string         `json:"icon"`
 	Children  []MenuTreeNode `json:"children,omitempty"`
@@ -70,7 +70,7 @@ type MenuAddBody struct {
 	Perms string `json:"perms" binding:"omitempty,max=100"`
 	// 菜单图标
 	Icon string `json:"icon" binding:"omitempty,max=100"`
-	// 显示状态 0显示 1隐藏
+	// 显示状态 0隐藏 1显示
 	Visible int8 `json:"visible" binding:"omitempty,oneof=0 1"`
 	// 备注
 	Remark string `json:"remark" binding:"omitempty,max=500"`
@@ -98,7 +98,7 @@ type MenuEditBody struct {
 	Perms *string `json:"perms" binding:"omitempty,max=100"`
 	// 菜单图标
 	Icon *string `json:"icon" binding:"omitempty,max=100"`
-	// 显示状态 0显示 1隐藏
+	// 显示状态 0隐藏 1显示
 	Visible *int8 `json:"visible" binding:"omitempty,oneof=0 1"`
 	// 备注
 	Remark *string `json:"remark" binding:"omitempty,max=500"`

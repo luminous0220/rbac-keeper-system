@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { App, Button, Popconfirm, Space, Tabs, Tag, Typography } from "antd";
+import { App, Button, Popconfirm, Tabs, Tag, Typography } from "antd";
+import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import { ProTable } from "@/components/ProTable";
 import type { ProTableRef, ProTableColumnType } from "@/components/ProTable";
 import { ProForm } from "@/components/ProForm";
@@ -8,7 +9,7 @@ import { Api, IApi } from "@/apis";
 import { usePerms } from "@/hooks";
 import dayjs from "dayjs";
 
-// 字典类型/数据状态：0正常 1停用（model.DictType/DictData）
+// 字典类型/数据状态：0停用 1正常 （model.DictType/DictData）
 const STATUS_TEXT: Record<number, string> = { 0: "正常", 1: "停用" };
 const STATUS_OPTIONS = [
 	{ label: "正常", value: 0 },
@@ -27,90 +28,62 @@ const DictTypeTab: React.FC<{ onViewData: () => void }> = ({ onViewData }) => {
 	const { message } = App.useApp();
 	const { hasPerm } = usePerms();
 	const tableRef = useRef<ProTableRef<IApi.DictTypeItem>>(null);
-	const addFormRef = useRef<ProFormInstance>(null);
-	const editFormRef = useRef<ProFormInstance>(null);
+	const formRef = useRef<ProFormInstance>(null);
+	// 区分当前弹窗是新增还是编辑，并保存编辑时的记录
+	const [formMode, setFormMode] = useState<{
+		type: "add" | "edit";
+		record?: IApi.DictTypeItem;
+	}>({ type: "add" });
 
-	const addFields: ProFormFields = [
-		{
-			type: "input",
-			label: "字典名称",
-			name: "dictName",
-			fieldProps: { maxLength: 100, placeholder: "2-100 个字符" },
-			rules: [
-				{ required: true, message: "请输入字典名称" },
-				{ min: 2, max: 100, message: "字典名称长度需为 2-100 位" },
-			],
-		},
-		{
-			type: "input",
-			label: "字典类型",
-			name: "dictType",
-			fieldProps: {
-				maxLength: 100,
-				placeholder: "唯一编码，如 sys_normal_disable",
+	// 动态生成字段：编辑与新增字段结构相同，仅 initialValues 不同
+	const getFormFields = useCallback((): ProFormFields => {
+		return [
+			{
+				type: "input",
+				label: "字典名称",
+				name: "dictName",
+				fieldProps: { maxLength: 100, placeholder: "2-100 个字符" },
+				rules: [
+					{ required: true, message: "请输入字典名称" },
+					{ min: 2, max: 100, message: "字典名称长度需为 2-100 位" },
+				],
 			},
-			rules: [
-				{ required: true, message: "请输入字典类型编码" },
-				{ min: 2, max: 100, message: "字典类型长度需为 2-100 位" },
-			],
-		},
-		{
-			type: "radio",
-			label: "状态",
-			name: "status",
-			fieldProps: { options: STATUS_OPTIONS },
-			rules: [{ required: true, message: "请选择状态" }],
-		},
-	];
-
-	const handleAdd = useCallback(
-		async (_title: string, values: Record<string, any>) => {
-			await Api.addDictType({
-				dictName: values.dictName,
-				dictType: values.dictType,
-				status: values.status,
-			});
-			message.success("新增字典类型成功");
-			tableRef.current?.refresh();
-		},
-		[message],
-	);
-
-	const editFields: ProFormFields = [
-		{
-			type: "input",
-			label: "字典名称",
-			name: "dictName",
-			fieldProps: { maxLength: 100 },
-			rules: [
-				{ required: true, message: "请输入字典名称" },
-				{ min: 2, max: 100, message: "字典名称长度需为 2-100 位" },
-			],
-		},
-		{
-			type: "input",
-			label: "字典类型",
-			name: "dictType",
-			fieldProps: {
-				maxLength: 100,
-				placeholder: "修改将迁移该类型下的字典数据",
+			{
+				type: "input",
+				label: "字典类型",
+				name: "dictType",
+				fieldProps: {
+					maxLength: 100,
+					placeholder: "唯一编码，如 sys_normal_disable",
+				},
+				rules: [
+					{ required: true, message: "请输入字典类型编码" },
+					{ min: 2, max: 100, message: "字典类型长度需为 2-100 位" },
+				],
 			},
-			rules: [
-				{ required: true, message: "请输入字典类型编码" },
-				{ min: 2, max: 100, message: "字典类型长度需为 2-100 位" },
-			],
-		},
-		{
-			type: "radio",
-			label: "状态",
-			name: "status",
-			fieldProps: { options: STATUS_OPTIONS },
-			rules: [{ required: true, message: "请选择状态" }],
-		},
-	];
+			{
+				type: "radio",
+				label: "状态",
+				name: "status",
+				fieldProps: { options: STATUS_OPTIONS },
+				rules: [{ required: true, message: "请选择状态" }],
+			},
+		];
+	}, []);
 
+	// 打开新增
+	const openAdd = useCallback(() => {
+		setFormMode({ type: "add" });
+		formRef.current?.open({
+			title: "新增字典类型",
+			initialValues: { status: 0 },
+		});
+	}, []);
+
+	// 打开编辑
 	const openEdit = useCallback((record: IApi.DictTypeItem) => {
-		editFormRef.current?.open({
+		setFormMode({ type: "edit", record });
+		formRef.current?.open({
 			title: `编辑字典类型：${record.dict_name}`,
 			initialValues: {
 				dictName: record.dict_name,
@@ -121,22 +94,29 @@ const DictTypeTab: React.FC<{ onViewData: () => void }> = ({ onViewData }) => {
 		});
 	}, []);
 
-	const handleEdit = useCallback(
+	// 统一提交
+	const handleFormSubmit = useCallback(
 		async (
 			_title: string,
 			values: Record<string, any>,
 			extraParams?: Record<string, any>,
 		) => {
-			const id = extraParams?.id as number;
-			await Api.editDictType(id, {
+			const payload = {
 				dictName: values.dictName,
 				dictType: values.dictType,
 				status: values.status,
-			});
-			message.success("修改字典类型成功");
+			};
+			if (formMode.type === "add") {
+				await Api.addDictType(payload);
+				message.success("新增字典类型成功");
+			} else {
+				const id = extraParams?.id as number;
+				await Api.editDictType(id, payload);
+				message.success("修改字典类型成功");
+			}
 			tableRef.current?.refresh();
 		},
-		[message],
+		[formMode.type, message],
 	);
 
 	const handleDelete = useCallback(
@@ -177,15 +157,27 @@ const DictTypeTab: React.FC<{ onViewData: () => void }> = ({ onViewData }) => {
 		{
 			title: "操作",
 			key: "action",
-			width: 190,
+			width: 240,
 			fixed: "right",
 			render: (_, record) => (
-				<Space size={0}>
-					<Button type="link" size="small" onClick={onViewData}>
+				<div className="flex items-center gap-2">
+					<Button
+						size="small"
+						color="primary"
+						variant="filled"
+						icon={<PlusOutlined />}
+						onClick={onViewData}
+					>
 						查看数据
 					</Button>
 					{hasPerm("system:dict:type:edit") && (
-						<Button type="link" size="small" onClick={() => openEdit(record)}>
+						<Button
+							size="small"
+							color="primary"
+							variant="filled"
+							icon={<EditOutlined />}
+							onClick={() => openEdit(record)}
+						>
 							编辑
 						</Button>
 					)}
@@ -198,12 +190,17 @@ const DictTypeTab: React.FC<{ onViewData: () => void }> = ({ onViewData }) => {
 							okButtonProps={{ danger: true }}
 							onConfirm={() => handleDelete(record)}
 						>
-							<Button type="link" size="small" danger>
+							<Button
+								size="small"
+								color="danger"
+								variant="filled"
+								icon={<DeleteOutlined />}
+							>
 								删除
 							</Button>
 						</Popconfirm>
 					)}
-				</Space>
+				</div>
 			),
 		},
 	];
@@ -220,12 +217,8 @@ const DictTypeTab: React.FC<{ onViewData: () => void }> = ({ onViewData }) => {
 					hasPerm("system:dict:type:add") ? (
 						<Button
 							type="primary"
-							onClick={() =>
-								addFormRef.current?.open({
-									title: "新增字典类型",
-									initialValues: { status: 0 },
-								})
-							}
+							icon={<PlusOutlined />}
+							onClick={openAdd}
 						>
 							新增类型
 						</Button>
@@ -245,15 +238,9 @@ const DictTypeTab: React.FC<{ onViewData: () => void }> = ({ onViewData }) => {
 				}}
 			/>
 			<ProForm
-				ref={addFormRef}
-				fields={addFields}
-				onConfirm={handleAdd}
-				width={520}
-			/>
-			<ProForm
-				ref={editFormRef}
-				fields={editFields}
-				onConfirm={handleEdit}
+				ref={formRef}
+				fields={getFormFields()}
+				onConfirm={handleFormSubmit}
 				width={520}
 			/>
 		</>
@@ -266,8 +253,12 @@ const DictDataTab: React.FC = () => {
 	const { message } = App.useApp();
 	const { hasPerm } = usePerms();
 	const tableRef = useRef<ProTableRef<IApi.DictDataItem>>(null);
-	const addFormRef = useRef<ProFormInstance>(null);
-	const editFormRef = useRef<ProFormInstance>(null);
+	const formRef = useRef<ProFormInstance>(null);
+	// 区分当前弹窗是新增还是编辑，并保存编辑时的记录
+	const [formMode, setFormMode] = useState<{
+		type: "add" | "edit";
+		record?: IApi.DictDataItem;
+	}>({ type: "add" });
 	const [typeOptions, setTypeOptions] = useState<
 		{ label: string; value: string }[]
 	>([]);
@@ -297,163 +288,99 @@ const DictDataTab: React.FC = () => {
 		});
 	}, []);
 
-	const addFields: ProFormFields = [
-		{
-			type: "select",
-			label: "字典类型",
-			name: "dictType",
-			fieldProps: {
-				options: typeOptions,
-				placeholder: "请选择所属字典类型",
-				showSearch: true,
+	// 动态生成字段：编辑 mode 下 dictType 置灰
+	const getFormFields = useCallback((): ProFormFields => {
+		const isEdit = formMode.type === "edit";
+		return [
+			{
+				type: "select",
+				label: "字典类型",
+				name: "dictType",
+				disabled: isEdit,
+				fieldProps: {
+					options: typeOptions,
+					placeholder: isEdit ? "所属类型不可修改" : "请选择所属字典类型",
+					showSearch: true,
+				},
+				rules: [{ required: true, message: "请选择字典类型" }],
 			},
-			rules: [{ required: true, message: "请选择字典类型" }],
-		},
-		{
-			type: "input",
-			label: "数据标签",
-			name: "dictLabel",
-			fieldProps: { maxLength: 100, placeholder: "展示名，如 男" },
-			rules: [
-				{ required: true, message: "请输入数据标签" },
-				{ min: 1, max: 100, message: "数据标签长度需为 1-100 位" },
-			],
-		},
-		{
-			type: "input",
-			label: "数据键值",
-			name: "dictValue",
-			fieldProps: { maxLength: 100, placeholder: "实际值，如 1" },
-			rules: [
-				{ required: true, message: "请输入数据键值" },
-				{ min: 1, max: 100, message: "数据键值长度需为 1-100 位" },
-			],
-		},
-		{
-			type: "input-number",
-			label: "显示顺序",
-			name: "dictSort",
-			fieldProps: { min: 0, style: { width: "100%" } },
-		},
-		{
-			type: "input",
-			label: "样式属性",
-			name: "cssClass",
-			fieldProps: { maxLength: 100, placeholder: "选填" },
-		},
-		{
-			type: "input",
-			label: "回显样式",
-			name: "listClass",
-			fieldProps: {
-				maxLength: 100,
-				placeholder: "如 success / danger / warning（选填）",
+			{
+				type: "input",
+				label: "数据标签",
+				name: "dictLabel",
+				fieldProps: { maxLength: 100, placeholder: "展示名，如 男" },
+				rules: [
+					{ required: true, message: "请输入数据标签" },
+					{ min: 1, max: 100, message: "数据标签长度需为 1-100 位" },
+				],
 			},
-		},
-		{
-			type: "radio",
-			label: "是否默认",
-			name: "isDefault",
-			fieldProps: { options: DEFAULT_OPTIONS },
-			rules: [{ required: true, message: "请选择是否默认" }],
-		},
-		{
-			type: "radio",
-			label: "状态",
-			name: "status",
-			fieldProps: { options: STATUS_OPTIONS },
-			rules: [{ required: true, message: "请选择状态" }],
-		},
-	];
-
-	const handleAdd = useCallback(
-		async (_title: string, values: Record<string, any>) => {
-			await Api.addDictData({
-				dictSort: values.dictSort ?? 0,
-				dictLabel: values.dictLabel,
-				dictValue: values.dictValue,
-				dictType: values.dictType,
-				cssClass: values.cssClass ?? "",
-				listClass: values.listClass ?? "",
-				isDefault: values.isDefault,
-				status: values.status,
-			});
-			message.success("新增字典数据成功");
-			tableRef.current?.refresh();
-		},
-		[message],
-	);
-
-	const editFields: ProFormFields = [
-		{
-			type: "select",
-			label: "字典类型",
-			name: "dictType",
-			disabled: true,
-			fieldProps: {
-				options: typeOptions,
-				placeholder: "所属类型不可修改",
-				disabled: true,
-				showSearch: true,
+			{
+				type: "input",
+				label: "数据键值",
+				name: "dictValue",
+				fieldProps: { maxLength: 100, placeholder: "实际值，如 1" },
+				rules: [
+					{ required: true, message: "请输入数据键值" },
+					{ min: 1, max: 100, message: "数据键值长度需为 1-100 位" },
+				],
 			},
-			rules: [{ required: true, message: "请选择字典类型" }],
-		},
-		{
-			type: "input",
-			label: "数据标签",
-			name: "dictLabel",
-			fieldProps: { maxLength: 100 },
-			rules: [
-				{ required: true, message: "请输入数据标签" },
-				{ min: 1, max: 100, message: "数据标签长度需为 1-100 位" },
-			],
-		},
-		{
-			type: "input",
-			label: "数据键值",
-			name: "dictValue",
-			fieldProps: { maxLength: 100 },
-			rules: [
-				{ required: true, message: "请输入数据键值" },
-				{ min: 1, max: 100, message: "数据键值长度需为 1-100 位" },
-			],
-		},
-		{
-			type: "input-number",
-			label: "显示顺序",
-			name: "dictSort",
-			fieldProps: { min: 0, style: { width: "100%" } },
-		},
-		{
-			type: "input",
-			label: "样式属性",
-			name: "cssClass",
-			fieldProps: { maxLength: 100 },
-		},
-		{
-			type: "input",
-			label: "回显样式",
-			name: "listClass",
-			fieldProps: { maxLength: 100 },
-		},
-		{
-			type: "radio",
-			label: "是否默认",
-			name: "isDefault",
-			fieldProps: { options: DEFAULT_OPTIONS },
-			rules: [{ required: true, message: "请选择是否默认" }],
-		},
-		{
-			type: "radio",
-			label: "状态",
-			name: "status",
-			fieldProps: { options: STATUS_OPTIONS },
-			rules: [{ required: true, message: "请选择状态" }],
-		},
-	];
+			{
+				type: "input-number",
+				label: "显示顺序",
+				name: "dictSort",
+				fieldProps: { min: 0, style: { width: "100%" } },
+			},
+			{
+				type: "input",
+				label: "样式属性",
+				name: "cssClass",
+				fieldProps: { maxLength: 100, placeholder: "选填" },
+			},
+			{
+				type: "input",
+				label: "回显样式",
+				name: "listClass",
+				fieldProps: {
+					maxLength: 100,
+					placeholder: "如 success / danger / warning（选填）",
+				},
+			},
+			{
+				type: "radio",
+				label: "是否默认",
+				name: "isDefault",
+				fieldProps: { options: DEFAULT_OPTIONS },
+				rules: [{ required: true, message: "请选择是否默认" }],
+			},
+			{
+				type: "radio",
+				label: "状态",
+				name: "status",
+				fieldProps: { options: STATUS_OPTIONS },
+				rules: [{ required: true, message: "请选择状态" }],
+			},
+		];
+	}, [formMode.type, typeOptions]);
 
+	// 打开新增
+	const openAdd = useCallback(() => {
+		setFormMode({ type: "add" });
+		formRef.current?.open({
+			title: "新增字典数据",
+			// 默认归属最近筛选的字典类型（未筛选则手动选择）
+			initialValues: {
+				dictType: lastType,
+				dictSort: 0,
+				isDefault: 0,
+				status: 0,
+			},
+		});
+	}, [lastType]);
+
+	// 打开编辑
 	const openEdit = useCallback((record: IApi.DictDataItem) => {
-		editFormRef.current?.open({
+		setFormMode({ type: "edit", record });
+		formRef.current?.open({
 			title: `编辑字典数据：${record.dict_label}`,
 			initialValues: {
 				dictType: record.dict_type,
@@ -469,14 +396,14 @@ const DictDataTab: React.FC = () => {
 		});
 	}, []);
 
-	const handleEdit = useCallback(
+	// 统一提交
+	const handleFormSubmit = useCallback(
 		async (
 			_title: string,
 			values: Record<string, any>,
 			extraParams?: Record<string, any>,
 		) => {
-			const id = extraParams?.id as number;
-			await Api.editDictData(id, {
+			const payload = {
 				dictSort: values.dictSort ?? 0,
 				dictLabel: values.dictLabel,
 				dictValue: values.dictValue,
@@ -484,11 +411,21 @@ const DictDataTab: React.FC = () => {
 				listClass: values.listClass ?? "",
 				isDefault: values.isDefault,
 				status: values.status,
-			});
-			message.success("修改字典数据成功");
+			};
+			if (formMode.type === "add") {
+				await Api.addDictData({
+					...payload,
+					dictType: values.dictType,
+				});
+				message.success("新增字典数据成功");
+			} else {
+				const id = extraParams?.id as number;
+				await Api.editDictData(id, payload);
+				message.success("修改字典数据成功");
+			}
 			tableRef.current?.refresh();
 		},
-		[message],
+		[formMode.type, message],
 	);
 
 	const handleDelete = useCallback(
@@ -547,12 +484,18 @@ const DictDataTab: React.FC = () => {
 		{
 			title: "操作",
 			key: "action",
-			width: 130,
+			width: 180,
 			fixed: "right",
 			render: (_, record) => (
-				<Space size={0}>
+				<div className="flex items-center gap-2">
 					{hasPerm("system:dict:data:edit") && (
-						<Button type="link" size="small" onClick={() => openEdit(record)}>
+						<Button
+							size="small"
+							color="primary"
+							variant="filled"
+							icon={<EditOutlined />}
+							onClick={() => openEdit(record)}
+						>
 							编辑
 						</Button>
 					)}
@@ -564,12 +507,17 @@ const DictDataTab: React.FC = () => {
 							okButtonProps={{ danger: true }}
 							onConfirm={() => handleDelete(record)}
 						>
-							<Button type="link" size="small" danger>
+							<Button
+								size="small"
+								color="danger"
+								variant="filled"
+								icon={<DeleteOutlined />}
+							>
 								删除
 							</Button>
 						</Popconfirm>
 					)}
-				</Space>
+				</div>
 			),
 		},
 	];
@@ -586,18 +534,8 @@ const DictDataTab: React.FC = () => {
 					hasPerm("system:dict:data:add") ? (
 						<Button
 							type="primary"
-							onClick={() =>
-								addFormRef.current?.open({
-									title: "新增字典数据",
-									// 默认归属最近筛选的字典类型（未筛选则手动选择）
-									initialValues: {
-										dictType: lastType,
-										dictSort: 0,
-										isDefault: 0,
-										status: 0,
-									},
-								})
-							}
+							icon={<PlusOutlined />}
+							onClick={openAdd}
 						>
 							新增数据
 						</Button>
@@ -627,15 +565,9 @@ const DictDataTab: React.FC = () => {
 				}}
 			/>
 			<ProForm
-				ref={addFormRef}
-				fields={addFields}
-				onConfirm={handleAdd}
-				width={560}
-			/>
-			<ProForm
-				ref={editFormRef}
-				fields={editFields}
-				onConfirm={handleEdit}
+				ref={formRef}
+				fields={getFormFields()}
+				onConfirm={handleFormSubmit}
 				width={560}
 			/>
 		</>

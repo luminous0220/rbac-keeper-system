@@ -146,7 +146,7 @@ export const Api = {
 
 	// ==================== 菜单 ====================
 
-	/** 菜单树（原生 model.Menu 嵌套树；status 0正常 1停用） */
+	/** 菜单树（原生 model.Menu 嵌套树；status 1正常 0停用） */
 	getMenuTree: (params?: { menuName?: string; status?: number }) =>
 		http.get<IApi.MenuRaw[]>({
 			url: "/api/menu/tree",
@@ -169,7 +169,7 @@ export const Api = {
 
 	// ==================== 部门 ====================
 
-	/** 部门树（原生 model.Dept，snake_case，status 0正常 1停用） */
+	/** 部门树（原生 model.Dept，snake_case，status 0停用 1正常 ） */
 	getDeptTree: (params?: { deptName?: string; status?: number }) =>
 		http.get<IApi.DeptRaw[]>({
 			url: "/api/dept/tree",

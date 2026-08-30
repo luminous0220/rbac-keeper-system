@@ -11,7 +11,7 @@ type DictTypeListQuery struct {
 	DictName string `form:"dictName"`
 	// 字典类型(模糊)
 	DictType string `form:"dictType"`
-	// 状态 0正常 1停用 不传则不筛选
+	// 状态 0停用 1正常  不传则不筛选
 	Status *int8 `form:"status" binding:"omitempty,oneof=0 1"`
 }
 
@@ -26,7 +26,7 @@ type DictTypeAddBody struct {
 	DictName string `json:"dictName" binding:"required,min=2,max=100"`
 	// 字典类型（唯一编码）
 	DictType string `json:"dictType" binding:"required,min=2,max=100"`
-	// 状态 0正常 1停用
+	// 状态 0停用 1正常
 	Status int8 `json:"status" binding:"omitempty,oneof=0 1"`
 }
 
@@ -36,7 +36,7 @@ type DictTypeEditBody struct {
 	DictName *string `json:"dictName" binding:"omitempty,min=2,max=100"`
 	// 字典类型（唯一编码，变更时联动数据与缓存）
 	DictType *string `json:"dictType" binding:"omitempty,min=2,max=100"`
-	// 状态 0正常 1停用
+	// 状态 0停用 1正常
 	Status *int8 `json:"status" binding:"omitempty,oneof=0 1"`
 }
 
@@ -49,7 +49,7 @@ type DictDataListQuery struct {
 	DictType string `form:"dictType"`
 	// 字典标签(模糊)
 	DictLabel string `form:"dictLabel"`
-	// 状态 0正常 1停用 不传则不筛选
+	// 状态 0停用 1正常  不传则不筛选
 	Status *int8 `form:"status" binding:"omitempty,oneof=0 1"`
 }
 
@@ -80,7 +80,7 @@ type DictDataAddBody struct {
 	ListClass string `json:"listClass" binding:"omitempty,max=100"`
 	// 是否默认 0否 1是
 	IsDefault int8 `json:"isDefault" binding:"omitempty,oneof=0 1"`
-	// 状态 0正常 1停用
+	// 状态 0停用 1正常
 	Status int8 `json:"status" binding:"omitempty,oneof=0 1"`
 }
 
@@ -98,6 +98,6 @@ type DictDataEditBody struct {
 	ListClass *string `json:"listClass" binding:"omitempty,max=100"`
 	// 是否默认 0否 1是
 	IsDefault *int8 `json:"isDefault" binding:"omitempty,oneof=0 1"`
-	// 状态 0正常 1停用
+	// 状态 0停用 1正常
 	Status *int8 `json:"status" binding:"omitempty,oneof=0 1"`
 }

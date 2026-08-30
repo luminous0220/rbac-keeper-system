@@ -1,15 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { App, Button, Form, Popconfirm, Space, Tag } from "antd";
+import { App, Button, Popconfirm, Tag } from "antd";
+import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import { ProTable } from "@/components/ProTable";
 import type { ProTableRef, ProTableColumnType } from "@/components/ProTable";
 import { ProForm } from "@/components/ProForm";
 import type { ProFormFields, ProFormInstance } from "@/components/ProForm";
-import { TreeSelectorModal } from "@/components/ModalSelector";
-import type {
-	TreeSelectorModalRef,
-	TreeNodeData,
-	TreeSelectorNode,
-} from "@/components/ModalSelector";
+import { TreeSelector } from "@/components/ModalSelector";
+import type { TreeNodeData } from "@/components/ModalSelector";
 import { Api, IApi } from "@/apis";
 import { usePerms } from "@/hooks";
 import dayjs from "dayjs";
@@ -32,7 +29,7 @@ const STATUS_OPTIONS = [
 	{ label: "禁用", value: 0 },
 ];
 
-/** 菜单树 → TreeSelectorModal 节点数据 */
+/** 菜单树 → TreeSelector 节点数据 */
 function toMenuTreeNodes(nodes: IApi.MenuRaw[]): TreeNodeData[] {
 	return nodes.map((m) => ({
 		value: m.id,
@@ -40,7 +37,7 @@ function toMenuTreeNodes(nodes: IApi.MenuRaw[]): TreeNodeData[] {
 		children: m.children?.length ? toMenuTreeNodes(m.children) : undefined,
 	}));
 }
-/** 部门树 → TreeSelectorModal 节点数据 */
+/** 部门树 → TreeSelector 节点数据 */
 function toDeptTreeNodes(nodes: IApi.DeptRaw[]): TreeNodeData[] {
 	return nodes.map((d) => ({
 		value: d.id,
@@ -48,61 +45,11 @@ function toDeptTreeNodes(nodes: IApi.DeptRaw[]): TreeNodeData[] {
 		children: d.children?.length ? toDeptTreeNodes(d.children) : undefined,
 	}));
 }
-/** 扁平化 id → 名称 映射（用于触发器回显选中项名称） */
-function collectNameMap<T extends { id: number; children?: T[] }>(
-	nodes: T[],
-	getName: (n: T) => string,
-): Map<number, string> {
-	const map = new Map<number, string>();
-	const walk = (list: T[]) => {
-		for (const n of list) {
-			map.set(n.id, getName(n));
-			if (n.children?.length) walk(n.children);
-		}
-	};
-	walk(nodes);
-	return map;
-}
-
-/** 树选择触发器：展示已选名称，点击打开 TreeSelectorModal */
-function TreeTrigger({
-	value,
-	nameMap,
-	placeholder,
-	onOpen,
-}: {
-	value?: number[];
-	nameMap: Map<number, string>;
-	placeholder: string;
-	onOpen: () => void;
-}) {
-	const ids = value ?? [];
-	const shown = ids.slice(0, 3).map((id) => nameMap.get(id) ?? `#${id}`);
-	return (
-		<div
-			onClick={onOpen}
-			className="w-full min-h-[32px] px-2 py-1 border border-[var(--ant-color-border)] rounded-md cursor-pointer hover:border-[var(--ant-color-primary)] flex items-center flex-wrap gap-1"
-		>
-			{ids.length === 0 ? (
-				<span className="text-[var(--ant-color-text-placeholder)]">
-					{placeholder}
-				</span>
-			) : (
-				<Space size={4} wrap>
-					{shown.map((n) => (
-						<Tag key={n}>{n}</Tag>
-					))}
-					{ids.length > shown.length && <Tag>+{ids.length - shown.length}</Tag>}
-				</Space>
-			)}
-		</div>
-	);
-}
 
 /**
  * 角色管理：列表 / 新增 / 编辑 / 删除。
  * - 列表返回原生 model.Role（snake_case，含 menus/depts 预加载）
- * - menuIds / deptIds 用 TreeSelectorModal 选择（deptIds 仅在 dataScope=2 时显示且必填）
+ * - menuIds / deptIds 用 TreeSelector 选择（deptIds 仅在 dataScope=2 时显示且必填）
  * - 删除走 /api/role/delete?roleKey=（后端校验绑定用户则拦截；super 角色禁止删除）
  * - role_key 创建后不可变，编辑时置灰
  */
@@ -110,13 +57,12 @@ const RolePage: React.FC = () => {
 	const { message } = App.useApp();
 	const { hasPerm } = usePerms();
 	const tableRef = useRef<ProTableRef<IApi.RoleItem>>(null);
-	const addRoleFormRef = useRef<ProFormInstance>(null);
-	const editRoleFormRef = useRef<ProFormInstance>(null);
-	const menuTreeModalRef = useRef<TreeSelectorModalRef>(null);
-	const deptTreeModalRef = useRef<TreeSelectorModalRef>(null);
-	// 当前树选择写入的目标表单与字段（add/edit 共用两个弹窗选择器）
-	const targetFormRef = useRef<ProFormInstance | null>(null);
-	const targetFieldRef = useRef<"menuIds" | "deptIds">("menuIds");
+	const formRef = useRef<ProFormInstance>(null);
+	// 区分当前弹窗是新增还是编辑，并保存编辑时的记录
+	const [formMode, setFormMode] = useState<{
+		type: "add" | "edit";
+		record?: IApi.RoleItem;
+	}>({ type: "add" });
 
 	const [menuTree, setMenuTree] = useState<IApi.MenuRaw[]>([]);
 	const [deptTree, setDeptTree] = useState<IApi.DeptRaw[]>([]);
@@ -132,182 +78,168 @@ const RolePage: React.FC = () => {
 
 	const menuTreeData = useMemo(() => toMenuTreeNodes(menuTree), [menuTree]);
 	const deptTreeData = useMemo(() => toDeptTreeNodes(deptTree), [deptTree]);
-	const menuNameMap = useMemo(
-		() => collectNameMap(menuTree, (m) => m.menu_name),
-		[menuTree],
-	);
-	const deptNameMap = useMemo(
-		() => collectNameMap(deptTree, (d) => d.dept_name),
-		[deptTree],
-	);
 
-	// ---- 树选择联动 ----
-	const openMenuSelector = useCallback(
-		(formRef: React.MutableRefObject<ProFormInstance | null>) => {
-			const current = (formRef.current?.getFieldValue("menuIds") ??
-				[]) as number[];
-			targetFormRef.current = formRef.current;
-			targetFieldRef.current = "menuIds";
-			menuTreeModalRef.current?.open({
-				title: "选择菜单权限",
-				checkedKeys: current.map((id) => ({
-					value: id,
-					title: menuNameMap.get(id) ?? `#${id}`,
-					type: "child",
-				})),
+	// 动态生成表单字段：编辑 mode 下 roleKey 置灰且追加 status；新增无需 status
+	const getFormFields = useCallback((): ProFormFields => {
+		const isEdit = formMode.type === "edit";
+
+		const fields: ProFormFields = [
+			{
+				type: "input",
+				label: "角色名称",
+				name: "roleName",
+				fieldProps: {
+					maxLength: 30,
+					placeholder: "2-30 个字符",
+				},
+				rules: [
+					{ required: true, message: "请输入角色名称" },
+					{ min: 2, max: 30, message: "角色名称长度需为 2-30 位" },
+				],
+			},
+			{
+				type: "input",
+				label: "角色标识",
+				name: "roleKey",
+				disabled: isEdit,
+				fieldProps: {
+					maxLength: 32,
+					placeholder: isEdit
+						? "创建后不可修改"
+						: "字母数字组合，创建后不可修改",
+				},
+				rules: isEdit
+					? undefined
+					: [
+							{ required: true, message: "请输入角色标识" },
+							{ min: 2, max: 32, message: "角色标识长度需为 2-32 位" },
+							{
+								pattern: /^[a-zA-Z0-9]+$/,
+								message: "角色标识只能包含字母和数字",
+							},
+						],
+			},
+			{
+				type: "input-number",
+				label: "显示顺序",
+				name: "roleSort",
+				fieldProps: { min: 0, style: { width: "100%" } },
+			},
+			{
+				type: "radio",
+				label: "数据权限",
+				name: "dataScope",
+				formItemProps: { className: "col-span-3" },
+				fieldProps: { options: DATA_SCOPE_OPTIONS },
+				rules: [{ required: true, message: "请选择数据权限" }],
+			},
+			// 菜单权限：自定义渲染 TreeSelector（受控：checkedKeys/onChange 直接使用 id 数组）
+			{
+				label: "菜单权限",
+				name: "menuIds",
+				formItemProps: { className: "col-span-3" },
+				render: (value, form) => (
+					<TreeSelector
+						title="选择菜单权限"
+						treeData={menuTreeData}
+						checkedKeys={(value as number[] | undefined) ?? []}
+						onChange={(keys) => {
+							form.setFieldValue(
+								"menuIds",
+								keys.map((k) => Number(k)),
+							);
+						}}
+						placeholder="请选择菜单权限"
+						width={820}
+					/>
+				),
+			},
+			// 自定义数据权限：仅 dataScope=2 时显示（StandardField 已支持自定义字段的 visible 函数）
+			{
+				label: "自定义数据权限部门",
+				name: "deptIds",
+				formItemProps: { className: "col-span-3" },
+				visible: (values) => values.dataScope === 2,
+				rules: [
+					{ required: true, message: "请选择数据权限部门" },
+					{
+						validator: (_rule: unknown, value: unknown) => {
+							const v = value as number[] | undefined;
+							return v && v.length > 0 ? Promise.resolve() : Promise.reject();
+						},
+					},
+				],
+
+				// rules: (values) =>
+				// 	values.dataScope === 2
+				// 		? [
+				// 				{ required: true, message: "请选择数据权限部门" },
+				// 				{
+				// 					validator: (_rule: unknown, value: unknown) => {
+				// 						const v = value as number[] | undefined;
+				// 						return v && v.length > 0
+				// 							? Promise.resolve()
+				// 							: Promise.reject();
+				// 					},
+				// 				},
+				// 			]
+				// 		: [],
+				render: (value, form) => (
+					<TreeSelector
+						title="选择自定义数据权限部门"
+						treeData={deptTreeData}
+						checkedKeys={(value as number[] | undefined) ?? []}
+						onChange={(keys) => {
+							form.setFieldValue(
+								"deptIds",
+								keys.map((k) => Number(k)),
+							);
+						}}
+						placeholder="请选择部门"
+						width={820}
+					/>
+				),
+			},
+			{
+				type: "textarea",
+				label: "备注",
+				name: "remark",
+				formItemProps: { className: "col-span-3" },
+				fieldProps: {
+					maxLength: 500,
+					rows: 3,
+					placeholder: "请输入备注（选填）",
+				},
+			},
+		];
+
+		// 编辑模式追加状态字段
+		if (isEdit) {
+			fields.splice(5, 0, {
+				type: "radio",
+				label: "状态",
+				name: "status",
+				fieldProps: { options: STATUS_OPTIONS },
+				rules: [{ required: true, message: "请选择状态" }],
 			});
-		},
-		[menuNameMap],
-	);
+		}
 
-	const openDeptSelector = useCallback(
-		(formRef: React.MutableRefObject<ProFormInstance | null>) => {
-			const current = (formRef.current?.getFieldValue("deptIds") ??
-				[]) as number[];
-			targetFormRef.current = formRef.current;
-			targetFieldRef.current = "deptIds";
-			deptTreeModalRef.current?.open({
-				title: "选择自定义数据权限部门",
-				checkedKeys: current.map((id) => ({
-					value: id,
-					title: deptNameMap.get(id) ?? `#${id}`,
-					type: "child",
-				})),
-			});
-		},
-		[deptNameMap],
-	);
+		return fields;
+	}, [formMode.type, menuTreeData, deptTreeData]);
 
-	const handleTreeConfirm = useCallback((selected: TreeSelectorNode[]) => {
-		targetFormRef.current?.setFieldValue(
-			targetFieldRef.current,
-			selected.map((s) => s.value as number),
-		);
+	// 打开新增
+	const openAdd = useCallback(() => {
+		setFormMode({ type: "add" });
+		formRef.current?.open({
+			title: "新增角色",
+			initialValues: { roleSort: 0, dataScope: 1 },
+		});
 	}, []);
 
-	// ---- 新增角色 ----
-	const addRoleFields: ProFormFields = [
-		{
-			type: "input",
-			label: "角色名称",
-			name: "roleName",
-			fieldProps: { maxLength: 30, placeholder: "2-30 个字符" },
-			rules: [
-				{ required: true, message: "请输入角色名称" },
-				{ min: 2, max: 30, message: "角色名称长度需为 2-30 位" },
-			],
-		},
-		{
-			type: "input",
-			label: "角色标识",
-			name: "roleKey",
-			fieldProps: {
-				maxLength: 32,
-				placeholder: "字母数字组合，创建后不可修改",
-			},
-			rules: [
-				{ required: true, message: "请输入角色标识" },
-				{ min: 2, max: 32, message: "角色标识长度需为 2-32 位" },
-				{ pattern: /^[a-zA-Z0-9]+$/, message: "角色标识只能包含字母和数字" },
-			],
-		},
-		{
-			type: "input-number",
-			label: "显示顺序",
-			name: "roleSort",
-			fieldProps: { min: 0, style: { width: "100%" } },
-		},
-		{
-			type: "radio",
-			label: "数据权限",
-			name: "dataScope",
-			formItemProps: {
-				className: "col-span-3",
-			},
-			fieldProps: { options: DATA_SCOPE_OPTIONS },
-			rules: [{ required: true, message: "请选择数据权限" }],
-		},
-		{
-			type: "textarea",
-			label: "备注",
-			name: "remark",
-			formItemProps: {
-				className: "col-span-3",
-			},
-			fieldProps: {
-				maxLength: 500,
-				rows: 3,
-				placeholder: "请输入备注（选填）",
-			},
-		},
-	];
-
-	const handleRoleAdd = useCallback(
-		async (_title: string, values: Record<string, any>) => {
-			await Api.addRole({
-				roleName: values.roleName,
-				roleKey: values.roleKey,
-				roleSort: values.roleSort ?? 0,
-				dataScope: values.dataScope,
-				menuIds: values.menuIds ?? [],
-				deptIds: values.deptIds ?? [],
-				remark: values.remark ?? "",
-			});
-			message.success("新增角色成功");
-			tableRef.current?.refresh();
-		},
-		[message],
-	);
-
-	// ---- 编辑角色 ----
-	const editRoleFields: ProFormFields = [
-		{
-			type: "input",
-			label: "角色名称",
-			name: "roleName",
-			fieldProps: { maxLength: 30 },
-			rules: [
-				{ required: true, message: "请输入角色名称" },
-				{ min: 2, max: 30, message: "角色名称长度需为 2-30 位" },
-			],
-		},
-		{
-			type: "input",
-			label: "角色标识",
-			name: "roleKey",
-			disabled: true,
-			fieldProps: { disabled: true, placeholder: "创建后不可修改" },
-		},
-		{
-			type: "input-number",
-			label: "显示顺序",
-			name: "roleSort",
-			fieldProps: { min: 0, style: { width: "100%" } },
-		},
-		{
-			type: "radio",
-			label: "数据权限",
-			name: "dataScope",
-			fieldProps: { options: DATA_SCOPE_OPTIONS },
-			rules: [{ required: true, message: "请选择数据权限" }],
-		},
-		{
-			type: "radio",
-			label: "状态",
-			name: "status",
-			fieldProps: { options: STATUS_OPTIONS },
-			rules: [{ required: true, message: "请选择状态" }],
-		},
-		{
-			type: "textarea",
-			label: "备注",
-			name: "remark",
-			fieldProps: { maxLength: 500, rows: 3 },
-		},
-	];
-
+	// 打开编辑
 	const openEdit = useCallback((record: IApi.RoleItem) => {
-		editRoleFormRef.current?.open({
+		setFormMode({ type: "edit", record });
+		formRef.current?.open({
 			title: `编辑角色：${record.role_name}`,
 			initialValues: {
 				roleName: record.role_name,
@@ -323,26 +255,38 @@ const RolePage: React.FC = () => {
 		});
 	}, []);
 
-	const handleRoleEdit = useCallback(
+	// 统一提交
+	const handleFormSubmit = useCallback(
 		async (
 			_title: string,
 			values: Record<string, any>,
 			extraParams?: Record<string, any>,
 		) => {
-			const roleKey = extraParams?.roleKey as string;
-			await Api.editRole(roleKey, {
+			const payload = {
 				roleName: values.roleName,
 				roleSort: values.roleSort ?? 0,
 				dataScope: values.dataScope,
-				status: values.status,
 				remark: values.remark ?? "",
 				menuIds: values.menuIds ?? [],
 				deptIds: values.deptIds ?? [],
-			});
-			message.success("修改角色成功");
+			};
+			if (formMode.type === "add") {
+				await Api.addRole({
+					...payload,
+					roleKey: values.roleKey,
+				});
+				message.success("新增角色成功");
+			} else {
+				const roleKey = extraParams?.roleKey as string;
+				await Api.editRole(roleKey, {
+					...payload,
+					status: values.status,
+				});
+				message.success("修改角色成功");
+			}
 			tableRef.current?.refresh();
 		},
-		[message],
+		[formMode.type, message],
 	);
 
 	// ---- 删除角色 ----
@@ -359,7 +303,6 @@ const RolePage: React.FC = () => {
 	const columns: ProTableColumnType<IApi.RoleItem>[] = [
 		{ title: "角色名称", dataIndex: "role_name", width: 140 },
 		{ title: "角色标识", dataIndex: "role_key", width: 120 },
-		{ title: "显示顺序", dataIndex: "role_sort", width: 90 },
 		{
 			title: "数据权限",
 			dataIndex: "data_scope",
@@ -392,12 +335,18 @@ const RolePage: React.FC = () => {
 		{
 			title: "操作",
 			key: "action",
-			width: 140,
+			width: 180,
 			fixed: "right",
 			render: (_, record) => (
-				<Space size={0}>
-					{hasPerm("system:role") && (
-						<Button type="link" size="small" onClick={() => openEdit(record)}>
+				<div className="flex items-center gap-2">
+					{hasPerm("system:role:edit") && (
+						<Button
+							size="small"
+							color="primary"
+							variant="filled"
+							icon={<EditOutlined />}
+							onClick={() => openEdit(record)}
+						>
 							编辑
 						</Button>
 					)}
@@ -410,51 +359,20 @@ const RolePage: React.FC = () => {
 							okButtonProps={{ danger: true }}
 							onConfirm={() => handleRoleDelete(record)}
 						>
-							<Button type="link" size="small" danger>
+							<Button
+								size="small"
+								color="danger"
+								variant="filled"
+								icon={<DeleteOutlined />}
+							>
 								删除
 							</Button>
 						</Popconfirm>
 					)}
-				</Space>
+				</div>
 			),
 		},
 	];
-
-	// 树选择触发器（表单 children 内嵌，add/edit 各一套）
-	const renderTreeTriggers = (
-		formRef: React.MutableRefObject<ProFormInstance | null>,
-	) => (
-		<>
-			<Form.Item label="菜单权限" name="menuIds" className="col-span-3">
-				<TreeTrigger
-					nameMap={menuNameMap}
-					placeholder="请选择菜单权限"
-					onOpen={() => openMenuSelector(formRef)}
-				/>
-			</Form.Item>
-			{/* 自定义数据权限：仅 dataScope=2 时显示且必填（与后端 required_if 对齐） */}
-			<Form.Item
-				noStyle
-				shouldUpdate={(prev, curr) => prev.dataScope !== curr.dataScope}
-			>
-				{({ getFieldValue }) =>
-					getFieldValue("dataScope") === 2 ? (
-						<Form.Item
-							label="自定义数据权限部门"
-							name="deptIds"
-							rules={[{ required: true, message: "请选择部门" }]}
-						>
-							<TreeTrigger
-								nameMap={deptNameMap}
-								placeholder="请选择部门"
-								onOpen={() => openDeptSelector(formRef)}
-							/>
-						</Form.Item>
-					) : null
-				}
-			</Form.Item>
-		</>
-	);
 
 	return (
 		<>
@@ -469,15 +387,7 @@ const RolePage: React.FC = () => {
 				title="角色管理"
 				toolbarExtra={
 					hasPerm("system:role:add") ? (
-						<Button
-							type="primary"
-							onClick={() =>
-								addRoleFormRef.current?.open({
-									title: "新增角色",
-									initialValues: { roleSort: 0, dataScope: 1 },
-								})
-							}
-						>
+						<Button type="primary" icon={<PlusOutlined />} onClick={openAdd}>
 							新增角色
 						</Button>
 					) : undefined
@@ -496,39 +406,13 @@ const RolePage: React.FC = () => {
 				}}
 			/>
 
-			{/* 新增角色弹窗 */}
+			{/* 角色表单：新增/编辑共用，menuIds/deptIds 用 TreeSelector 渲染 */}
 			<ProForm
-				ref={addRoleFormRef}
-				fields={addRoleFields}
-				onConfirm={handleRoleAdd}
+				ref={formRef}
+				fields={getFormFields()}
+				onConfirm={handleFormSubmit}
 				className="grid grid-cols-3 gap-4"
 				width={840}
-			>
-				{renderTreeTriggers(addRoleFormRef)}
-			</ProForm>
-			{/* 编辑角色弹窗 */}
-			<ProForm
-				ref={editRoleFormRef}
-				fields={editRoleFields}
-				onConfirm={handleRoleEdit}
-				className="grid grid-cols-2 gap-4"
-				width={640}
-			>
-				{renderTreeTriggers(editRoleFormRef)}
-			</ProForm>
-
-			{/* 菜单权限 / 部门选择弹窗（add/edit 共用） */}
-			<TreeSelectorModal
-				ref={menuTreeModalRef}
-				treeData={menuTreeData}
-				width={820}
-				onConfirm={handleTreeConfirm}
-			/>
-			<TreeSelectorModal
-				ref={deptTreeModalRef}
-				treeData={deptTreeData}
-				width={820}
-				onConfirm={handleTreeConfirm}
 			/>
 		</>
 	);

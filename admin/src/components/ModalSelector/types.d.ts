@@ -101,14 +101,17 @@ export interface TreeSelectorNode {
 	pid?: number | string;
 }
 
+/** TreeSelector 已选 key 类型（与 TreeNodeData.value 一致） */
+export type TreeSelectorKey = number | string;
+
 /** TreeSelector Props */
 export interface TreeSelectorProps {
 	/** 弹窗标题，默认 "选择经营区域" */
 	title?: string;
-	/** 已选数据（受控） */
-	checkedKeys?: TreeSelectorNode[];
-	/** 选择变化回调 */
-	onChange?: (selected: TreeSelectorNode[]) => void;
+	/** 已选 key 列表（受控）。title 等展示信息由内部从 treeData 推导，避免调用方重复构造 */
+	checkedKeys?: TreeSelectorKey[];
+	/** 选择变化回调：返回已选 key 列表 */
+	onChange?: (selected: TreeSelectorKey[]) => void;
 	/** 树形数据源（静态数据，与 api 二选一） */
 	treeData?: TreeNodeData[];
 	/**
@@ -122,7 +125,7 @@ export interface TreeSelectorProps {
 	disabled?: boolean;
 	/** 弹窗宽度，默认 1220 */
 	width?: number;
-	/** 自定义触发器 */
+	/** 自定义触发器：selectedItems 已带 title，可直接用于展示 */
 	renderTrigger?: (props: SelectorTriggerRenderProps<TreeSelectorNode>) => ReactNode;
 }
 
@@ -130,7 +133,8 @@ export interface TreeSelectorProps {
 export interface TreeSelectorModalOpenProps {
 	title?: string;
 	treeData?: TreeNodeData[];
-	checkedKeys?: TreeSelectorNode[];
+	/** 已选 key 列表（由 TreeSelectorModal 内部从 treeData 推导 title/parent） */
+	checkedKeys?: TreeSelectorKey[];
 }
 
 /** TreeSelectorModal 实例方法 */
@@ -146,7 +150,8 @@ export interface TreeSelectorModalProps {
 	/** 数据请求函数（默认值） */
 	api?: TreeSelectorApi;
 	width?: number;
-	onConfirm?: (selected: TreeSelectorNode[]) => void;
+	/** 确认回调：返回已选 key 列表（title 等信息可由 treeData 推导） */
+	onConfirm?: (selected: TreeSelectorKey[]) => void;
 }
 
 // ==================== 表格选择器类型 ====================
@@ -158,6 +163,9 @@ export interface TableSelectorNode {
 	desc?: string;
 }
 
+/** TableSelector 已选 key 类型 */
+export type TableSelectorKey = number | string;
+
 /** TableSelector Props — 继承 ProTable 全部能力，增加选择器专属 props */
 export interface TableSelectorProps<T = Record<string, any>> extends Omit<
 	ProTableProps<T>,
@@ -165,10 +173,10 @@ export interface TableSelectorProps<T = Record<string, any>> extends Omit<
 > {
 	/** 弹窗标题，默认 "选择数据" */
 	title?: string;
-	/** 已选数据（受控） */
-	checkedKeys?: TableSelectorNode[];
-	/** 选择变化回调 */
-	onChange?: (selected: TableSelectorNode[]) => void;
+	/** 已选 key 列表（受控）。title/desc 由 Selector 内部从 Modal 缓存推导 */
+	checkedKeys?: TableSelectorKey[];
+	/** 选择变化回调：返回已选 key 列表 */
+	onChange?: (selected: TableSelectorKey[]) => void;
 	/** 占位文本，默认 "请选择" */
 	placeholder?: string;
 	/** 是否禁用 */
@@ -185,7 +193,7 @@ export interface TableSelectorProps<T = Record<string, any>> extends Omit<
 	labelKey?: string;
 	/** 行数据中描述字段名，默认 "desc" */
 	descKey?: string;
-	/** 自定义触发器 */
+	/** 自定义触发器：selectedItems 已带 title/desc */
 	renderTrigger?: (props: SelectorTriggerRenderProps<TableSelectorNode>) => ReactNode;
 }
 
@@ -193,8 +201,8 @@ export interface TableSelectorProps<T = Record<string, any>> extends Omit<
 export interface TableSelectorModalOpenProps {
 	/** 弹窗标题（覆盖默认值） */
 	title?: string;
-	/** 已选数据（用于恢复选中状态） */
-	checkedKeys?: TableSelectorNode[];
+	/** 已选 key 列表（用于恢复选中状态，title 由 Modal 内部从表格数据推导） */
+	checkedKeys?: TableSelectorKey[];
 }
 
 /** TableSelectorModal 实例方法 */
@@ -219,7 +227,10 @@ export interface TableSelectorModalProps<T = Record<string, any>>
 	 * - "radio"：单选
 	 */
 	selectionType?: "checkbox" | "radio";
-	/** 确认回调 */
+	/**
+	 * 确认回调：返回完整 items（数据在 Modal 内部通过 ProTable 拉取，
+	 * 包含 title/desc，外部需要展示已选标签时由 Selector 包装器缓存这些信息）
+	 */
 	onConfirm?: (selected: TableSelectorNode[]) => void;
 	/** 行数据中标题字段名，默认 "name" */
 	labelKey?: string;
@@ -240,6 +251,9 @@ export interface ListItemData {
 /** 列表已选项 */
 export type ListSelectorNode = TableSelectorNode;
 
+/** ListSelector 已选 key 类型 */
+export type ListSelectorKey = number | string;
+
 /** ListSelector api 参数 */
 export interface ListSelectorApiParams {
 	pageNumber: number;
@@ -256,10 +270,10 @@ export type ListSelectorApi = (
 export interface ListSelectorProps {
 	/** 弹窗标题，默认 "选择数据" */
 	title?: string;
-	/** 已选数据（受控） */
-	checkedKeys?: ListSelectorNode[];
-	/** 选择变化回调 */
-	onChange?: (selected: ListSelectorNode[]) => void;
+	/** 已选 key 列表（受控）。title/desc 等展示信息由 Selector 内部从 Modal 缓存推导 */
+	checkedKeys?: ListSelectorKey[];
+	/** 选择变化回调：返回已选 key 列表 */
+	onChange?: (selected: ListSelectorKey[]) => void;
 	/** 数据请求函数（必填） */
 	api: ListSelectorApi;
 	/** 占位文本，默认 "请选择" */
@@ -278,8 +292,8 @@ export interface ListSelectorModalOpenProps {
 	title?: string;
 	/** 静态数据源（直接传入，跳过 api 请求） */
 	data?: ListItemData[];
-	/** 已选数据（恢复选中状态） */
-	checkedKeys?: ListSelectorNode[];
+	/** 已选 key 列表（用于恢复选中状态，title 由 Modal 内部从 data 推导） */
+	checkedKeys?: ListSelectorKey[];
 }
 
 /** ListSelectorModal 实例方法 */
@@ -296,6 +310,9 @@ export interface ListSelectorModalProps {
 	width?: number;
 	/** 数据请求函数 */
 	api?: ListSelectorApi;
-	/** 确认回调 */
-	onConfirm?: (selected: ListSelectorNode[]) => void;
+	/**
+	 * 确认回调：返回完整 items（因为数据在 Modal 内部通过 api 拉取，
+	 * 包含 title/desc，外部需要展示已选标签时由 Selector 包装器缓存这些信息）
+	 */
+	onConfirm?: (selected: ListItemData[]) => void;
 }

@@ -1,6 +1,7 @@
 import {
 	useState,
 	useEffect,
+	useLayoutEffect,
 	useCallback,
 	useMemo,
 	useRef,
@@ -98,6 +99,19 @@ export function ProTableInner<T>(
 	const prevPaginationRef = useRef(pagination);
 	// 强制刷新标识
 	const forceRefreshRef = useRef(false);
+	// 序号列专用的"显示"分页：仅在 dataSource 更新时同步，避免翻页瞬间序号先于数据变化
+	const [displayedPagination, setDisplayedPagination] = useState({
+		pageNumber: defaultPagination.pageNumber,
+		pageSize: defaultPagination.pageSize,
+	});
+	useLayoutEffect(() => {
+		setDisplayedPagination({
+			pageNumber: pagination.pageNumber,
+			pageSize: pagination.pageSize,
+		});
+		// 仅依赖 dataSource，让序号与新数据同步刷新，避免分页变化早于数据导致的序号闪烁
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [dataSource]);
 
 	const debounceRef = useRef<ReturnType<typeof setTimeout>>(null);
 
@@ -297,8 +311,8 @@ export function ProTableInner<T>(
 		if (index) {
 			result = [
 				createIndexColumn(
-					pagination.pageNumber,
-					pagination.pageSize,
+					displayedPagination.pageNumber,
+					displayedPagination.pageSize,
 					indexWidth,
 				),
 				...result,
@@ -318,8 +332,8 @@ export function ProTableInner<T>(
 		dragSort,
 		index,
 		isMobile,
-		pagination.pageNumber,
-		pagination.pageSize,
+		displayedPagination.pageNumber,
+		displayedPagination.pageSize,
 	]);
 
 	// 导出 Excel / 自定义导出
@@ -520,8 +534,8 @@ export function ProTableInner<T>(
 			rowKey,
 			renderedColumns,
 			dataSource,
-			loading,
 			density,
+			loading,
 			paginationConfig,
 			rowSelectionConfig,
 			mergedScroll,

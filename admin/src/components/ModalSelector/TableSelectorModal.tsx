@@ -152,13 +152,19 @@ function TableSelectorModalInner<T extends Record<string, any> = Record<string, 
 	const open = useCallback(
 		(props: TableSelectorModalOpenProps) => {
 			setModalTitle(props.title ?? defaultTitle);
-			// 恢复已选状态
+			// 恢复已选状态：checkedKeys 现在是简单 key 列表
+			// cache 仅保留之前已选且仍在新 keys 中的项（首次打开 cache 为空，SelectedPanel 不展示旧 title）
 			if (props.checkedKeys?.length) {
-				const keys = props.checkedKeys.map((item) => item.value);
+				const keys: React.Key[] = [...props.checkedKeys];
 				setModalCheckedKeys(keys);
-				const cache: Record<string, TableSelectorNode> = {};
-				for (const item of props.checkedKeys) cache[String(item.value)] = item;
-				setModalItemCache(cache);
+				setModalItemCache((prev) => {
+					const next: Record<string, TableSelectorNode> = {};
+					for (const k of keys) {
+						const cached = prev[String(k)];
+						if (cached) next[String(k)] = cached;
+					}
+					return next;
+				});
 			} else {
 				setModalCheckedKeys([]);
 				setModalItemCache({});

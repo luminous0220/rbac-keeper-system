@@ -1,13 +1,10 @@
 import { useCallback, useMemo, useRef, useState } from "react";
+import { App, Button, Popconfirm, Tag, TreeSelect, Typography } from "antd";
 import {
-	App,
-	Button,
-	Popconfirm,
-	Space,
-	Tag,
-	TreeSelect,
-	Typography,
-} from "antd";
+	PlusOutlined,
+	EditOutlined,
+	DeleteOutlined,
+} from "@ant-design/icons";
 import type { FormInstance } from "antd";
 import { ProTable } from "@/components/ProTable";
 import type { ProTableRef, ProTableColumnType } from "@/components/ProTable";
@@ -36,7 +33,7 @@ const MENU_STATUS_OPTIONS = [
 	{ label: "正常", value: 1 },
 	{ label: "停用", value: 0 },
 ];
-// 显示状态：0显示 1隐藏
+// 显示状态：0隐藏 1显示 
 const VISIBLE_TEXT: Record<number, string> = { 1: "显示", 0: "隐藏" };
 const VISIBLE_OPTIONS = [
 	{ label: "显示", value: 1 },
@@ -264,8 +261,12 @@ const MenuPage: React.FC = () => {
 	const { message } = App.useApp();
 	const { hasPerm } = usePerms();
 	const tableRef = useRef<ProTableRef<IApi.MenuRaw>>(null);
-	const addFormRef = useRef<ProFormInstance>(null);
-	const editFormRef = useRef<ProFormInstance>(null);
+	const formRef = useRef<ProFormInstance>(null);
+	// 区分当前弹窗是新增还是编辑，并保存编辑时的记录
+	const [formMode, setFormMode] = useState<{
+		type: "add" | "edit";
+		record?: IApi.MenuRaw;
+	}>({ type: "add" });
 	// 上级菜单下拉：随表格数据同步刷新
 	const [menuTree, setMenuTree] = useState<IApi.MenuRaw[]>([]);
 
@@ -289,57 +290,37 @@ const MenuPage: React.FC = () => {
 		return { data, total: 0 };
 	}, []);
 
-	const addFields = useMemo(
-		() => buildMenuFields(false, dirTreeData, menuDirTreeData),
-		[dirTreeData, menuDirTreeData],
-	);
-	const editFields = useMemo(
-		() => buildMenuFields(true, dirTreeData, menuDirTreeData),
-		[dirTreeData, menuDirTreeData],
-	);
+	// 动态生成字段：编辑模式 menuType 置灰
+	const getFormFields = useCallback((): ProFormFields => {
+		const menuTypeDisabled = formMode.type === "edit";
+		return buildMenuFields(menuTypeDisabled, dirTreeData, menuDirTreeData);
+	}, [formMode.type, dirTreeData, menuDirTreeData]);
 
 	// 打开新增：指定父级时按父类型预选 menuType（M 下默认菜单 C；C 下默认按钮 F）
-	const openAdd = useCallback((parent?: IApi.MenuRaw) => {
-		const base: Record<string, any> = { orderNum: 0, status: 1, visible: 0 };
-		if (parent) {
-			base.menuType = parent.menu_type === "M" ? "C" : "F";
-			base.parentId = parent.id;
-		} else {
-			base.menuType = "M";
-		}
-		addFormRef.current?.open({
-			title: parent
-				? `新增${parent.menu_type === "M" ? "菜单" : "按钮"}`
-				: "新增菜单",
-			initialValues: base,
-		});
-	}, []);
-
-	const handleAdd = useCallback(
-		async (_title: string, values: Record<string, any>) => {
-			await Api.addMenu({
-				parentId: values.parentId ?? 0,
-				menuName: values.menuName,
-				menuType: values.menuType,
-				orderNum: values.orderNum ?? 0,
-				path: values.path ?? "",
-				component: values.component ?? "",
-				query: values.query ?? "",
-				status: values.status,
-				perms: values.perms ?? "",
-				icon: values.icon ?? "",
-				visible: values.visible ?? 0,
-				remark: values.remark ?? "",
+	const openAdd = useCallback(
+		(parent?: IApi.MenuRaw) => {
+			setFormMode({ type: "add" });
+			const base: Record<string, any> = { orderNum: 0, status: 1, visible: 0 };
+			if (parent) {
+				base.menuType = parent.menu_type === "M" ? "C" : "F";
+				base.parentId = parent.id;
+			} else {
+				base.menuType = "M";
+			}
+			formRef.current?.open({
+				title: parent
+					? `新增${parent.menu_type === "M" ? "菜单" : "按钮"}`
+					: "新增菜单",
+				initialValues: base,
 			});
-			message.success("新增菜单成功");
-			tableRef.current?.refresh();
 		},
-		[message],
+		[],
 	);
 
-	// ---- 编辑菜单 ----
+	// 打开编辑
 	const openEdit = useCallback((record: IApi.MenuRaw) => {
-		editFormRef.current?.open({
+		setFormMode({ type: "edit", record });
+		formRef.current?.open({
 			title: `编辑菜单：${record.menu_name}`,
 			// 根菜单 parent_id=0 置 undefined，展示占位「不选择则为顶级目录」
 			initialValues: {
@@ -360,14 +341,14 @@ const MenuPage: React.FC = () => {
 		});
 	}, []);
 
-	const handleEdit = useCallback(
+	// 统一提交
+	const handleFormSubmit = useCallback(
 		async (
 			_title: string,
 			values: Record<string, any>,
 			extraParams?: Record<string, any>,
 		) => {
-			const id = extraParams?.id as number;
-			await Api.editMenu(id, {
+			const payload = {
 				parentId: values.parentId ?? 0,
 				menuName: values.menuName,
 				menuType: values.menuType,
@@ -380,11 +361,18 @@ const MenuPage: React.FC = () => {
 				icon: values.icon ?? "",
 				visible: values.visible ?? 0,
 				remark: values.remark ?? "",
-			});
-			message.success("修改菜单成功");
+			};
+			if (formMode.type === "add") {
+				await Api.addMenu(payload);
+				message.success("新增菜单成功");
+			} else {
+				const id = extraParams?.id as number;
+				await Api.editMenu(id, payload);
+				message.success("修改菜单成功");
+			}
 			tableRef.current?.refresh();
 		},
-		[message],
+		[formMode.type, message],
 	);
 
 	// ---- 删除菜单 ----
@@ -476,17 +464,29 @@ const MenuPage: React.FC = () => {
 		{
 			title: "操作",
 			key: "action",
-			width: 190,
+			width: 260,
 			fixed: "right",
 			render: (_, record) => (
-				<Space size={0}>
+				<div className="flex items-center gap-2">
 					{hasPerm("system:menu:add") && record.menu_type !== "F" && (
-						<Button type="link" size="small" onClick={() => openAdd(record)}>
+						<Button
+							size="small"
+							color="primary"
+							variant="filled"
+							icon={<PlusOutlined />}
+							onClick={() => openAdd(record)}
+						>
 							新增{record.menu_type === "M" ? "菜单" : "按钮"}
 						</Button>
 					)}
 					{hasPerm("system:menu:edit") && (
-						<Button type="link" size="small" onClick={() => openEdit(record)}>
+						<Button
+							size="small"
+							color="primary"
+							variant="filled"
+							icon={<EditOutlined />}
+							onClick={() => openEdit(record)}
+						>
 							编辑
 						</Button>
 					)}
@@ -499,12 +499,17 @@ const MenuPage: React.FC = () => {
 							okButtonProps={{ danger: true }}
 							onConfirm={() => handleDelete(record)}
 						>
-							<Button type="link" size="small" danger>
+							<Button
+								size="small"
+								color="danger"
+								variant="filled"
+								icon={<DeleteOutlined />}
+							>
 								删除
 							</Button>
 						</Popconfirm>
 					)}
-				</Space>
+				</div>
 			),
 		},
 	];
@@ -520,7 +525,11 @@ const MenuPage: React.FC = () => {
 				index={false}
 				toolbarExtra={
 					hasPerm("system:menu:add") ? (
-						<Button type="primary" onClick={() => openAdd()}>
+						<Button
+							type="primary"
+							icon={<PlusOutlined />}
+							onClick={() => openAdd()}
+						>
 							新增菜单
 						</Button>
 					) : undefined
@@ -537,19 +546,12 @@ const MenuPage: React.FC = () => {
 					],
 				}}
 			/>
-			{/* 新增菜单弹窗（三 Tab：目录/菜单/按钮） */}
+			{/* 菜单表单：新增/编辑共用同一抽屉，编辑时 menuType 置灰不可切换 */}
 			<ProForm
 				type="drawer"
-				ref={addFormRef}
-				fields={addFields}
-				onConfirm={handleAdd}
-			/>
-			{/* 编辑菜单弹窗（menuType 置灰不可切换） */}
-			<ProForm
-				type="drawer"
-				ref={editFormRef}
-				fields={editFields}
-				onConfirm={handleEdit}
+				ref={formRef}
+				fields={getFormFields()}
+				onConfirm={handleFormSubmit}
 			/>
 		</>
 	);

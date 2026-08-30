@@ -13,7 +13,7 @@ type Menu struct {
 	Status    int8   `gorm:"default:0;comment:菜单状态 1正常 0停用" json:"status"`
 	Perms     string `gorm:"size:100;uniqueIndex;comment:权限标识" json:"perms"`
 	Icon      string `gorm:"size:100;comment:菜单图标" json:"icon"`
-	Visible   int8   `gorm:"default:0;comment:显示状态 0显示 1隐藏" json:"visible"`
+	Visible   int8   `gorm:"default:0;comment:显示状态 1显示 0隐藏" json:"visible"`
 	Remark    string `gorm:"size:500;comment:备注" json:"remark"`
 	// 关联关系：自关联子菜单（指针切片，便于 O(n) 递归挂载与多级构建）
 	Children []*Menu `gorm:"foreignKey:ParentID" json:"children"`
