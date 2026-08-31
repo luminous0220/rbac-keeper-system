@@ -5,8 +5,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"rbackeeper/internal/constants"
-	"rbackeeper/internal/service"
+	"rbackeeper/constants"
+	"rbackeeper/internal/auth"
 	"rbackeeper/response"
 	"rbackeeper/utils"
 )
@@ -31,7 +31,7 @@ func JWTAuth() gin.HandlerFunc {
 			c.Abort()
 			return
 		}
-		if revoked, msg := service.IsTokenRevoked(c.Request.Context(), claims); revoked {
+		if revoked, msg := auth.IsTokenRevoked(c.Request.Context(), claims); revoked {
 			response.Fail(c, response.ErrTokenInvalid, msg)
 			c.Abort()
 			return

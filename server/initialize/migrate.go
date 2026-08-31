@@ -4,7 +4,7 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"rbackeeper/global"
-	"rbackeeper/internal/model"
+	"rbackeeper/model"
 )
 
 // RegisterMigrate 自动建表/同步表结构。开发环境使用，生产建议改用迁移脚本

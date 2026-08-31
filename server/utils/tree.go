@@ -132,8 +132,7 @@ func CollectSubtreeIDs[T any](
 	return ids
 }
 
-// 过滤树形数据：保留匹配节点及其全部祖先，保证过滤后树结构完整。
-// 用于菜单/部门按名称模糊查询时，避免父链断裂导致树散开成孤立节点。
+// 在树形结构中进行模糊搜索时，保留所有“命中条件的节点”，并自动把它们向上的“祖先节点（父级、爷爷级等）也一并保留”，从而保证返回给前端的数据依然是一棵结构完整的树，而不是散落的孤立节点
 func FilterTreeWithAncestors[T any](
 	items []T,
 	getID func(T) uint,

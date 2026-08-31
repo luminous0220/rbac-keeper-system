@@ -16,7 +16,7 @@ import (
 	ginSwagger "github.com/swaggo/gin-swagger"
 
 	"rbackeeper/config"
-	"rbackeeper/internal/controller"
+	"rbackeeper/internal/health"
 	"rbackeeper/middleware"
 
 	_ "rbackeeper/docs" // swagger 生成的文档
@@ -34,10 +34,10 @@ func Setup(cfg config.CFG) *gin.Engine {
 
 	router.Use(middleware.Recovery(), middleware.RequestLog(), middleware.CORS())
 
-	health := &controller.HealthController{}
+	hc := &health.Controller{}
 	// 根路径健康探针，供负载均衡/k8s 探活
-	router.GET("/healthz", health.Healthz)
-	router.GET("/readyz", health.Readyz)
+	router.GET("/healthz", hc.Healthz)
+	router.GET("/readyz", hc.Readyz)
 
 	base := router.Group("/api")
 	{

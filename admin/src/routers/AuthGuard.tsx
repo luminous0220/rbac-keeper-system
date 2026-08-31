@@ -47,18 +47,7 @@ export const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
 
 				// 2. 逐个角色取明细，汇总数据权限：dataScope 取最小（最宽），depts 取并集
 				const roleKeys = info.roles?.map((r) => r.role_key) ?? [];
-				let dataScope = Infinity;
 				const deptMap = new Map<number, IApi.DeptRaw>();
-				for (const rk of roleKeys) {
-					try {
-						const detail = await Api.getRoleInfo(rk);
-						dataScope = Math.min(dataScope, detail.data_scope);
-						(detail.depts ?? []).forEach((d) => deptMap.set(d.id, d));
-					} catch (err) {
-						// 单个角色明细失败不阻断引导；dataScope 保持已汇总值
-						console.error(`获取角色 ${rk} 权限失败`, err);
-					}
-				}
 
 				// 3. 权限并集：以 F 型按钮 perms 为主；M/C 目录/菜单的 perms 也一并纳入，
 				//    供模块级按钮判断使用（seed 中角色管理缺 system:role:edit 按钮，需用 system:role 兜底）
@@ -72,7 +61,6 @@ export const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
 					menus: buildMenuTree(info.menus ?? []),
 					perms,
 					roleKeys,
-					dataScope: dataScope === Infinity ? 5 : dataScope,
 					depts: [...deptMap.values()],
 				});
 				setIsOnline(true);

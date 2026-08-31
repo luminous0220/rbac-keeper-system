@@ -9,7 +9,7 @@ import (
 	"gorm.io/gorm"
 
 	"rbackeeper/global"
-	"rbackeeper/internal/model"
+	"rbackeeper/model"
 	"rbackeeper/utils"
 )
 

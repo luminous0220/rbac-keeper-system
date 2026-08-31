@@ -4,7 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 
-	"rbackeeper/internal/constants"
+	"rbackeeper/constants"
 )
 
 // 核心通用方法

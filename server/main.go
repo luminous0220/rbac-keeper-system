@@ -5,11 +5,11 @@ import (
 	"rbackeeper/config"
 	"rbackeeper/global"
 	"rbackeeper/initialize"
-	"rbackeeper/internal/consumer"
+	"rbackeeper/internal/log"
 	"rbackeeper/router"
 	"rbackeeper/utils/casbinx"
 
-	"github.com/rs/zerolog/log"
+	zerolog "github.com/rs/zerolog/log"
 )
 
 // @title           RBAC Keeper System API
@@ -50,11 +50,11 @@ func main() {
 	// 策略引擎初始化 + 首次全量加载（依赖 seed 后的 role_menus / user_roles）
 	casbinx.Init()
 	if err := casbinx.ReloadEnforcerPolicies(); err != nil {
-		log.Warn().Err(err).Msg("Casbin 策略首次加载失败")
+		zerolog.Warn().Err(err).Msg("Casbin 策略首次加载失败")
 	}
 
 	// 先注册各业务的消费者
-	consumer.InitOperationLog()
+	log.InitOperationLog()
 
 	// 启动前确保所有 topic 已存在（不存在则自动创建，避免 Consumer 启动报 topic not exist）
 	initialize.EnsureConsumerTopics(ctx, initialize.Topics()...)
@@ -63,9 +63,9 @@ func main() {
 
 	// 启动健康检查自检
 	if comps, ok := initialize.HealthCheck(); ok {
-		log.Info().Int("components", len(comps)).Msg("rbackeeper 启动完成，所有依赖健康")
+		zerolog.Info().Int("components", len(comps)).Msg("rbackeeper 启动完成，所有依赖健康")
 	} else {
-		log.Warn().Int("components", len(comps)).Msg("rbackeeper 启动完成，但部分依赖异常")
+		zerolog.Warn().Int("components", len(comps)).Msg("rbackeeper 启动完成，但部分依赖异常")
 	}
 
 	// 启动 HTTP 服务（阻塞，支持优雅关闭）

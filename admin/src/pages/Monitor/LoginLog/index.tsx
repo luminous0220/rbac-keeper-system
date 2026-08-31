@@ -15,7 +15,7 @@ const STATUS_OPTIONS = [
 
 /**
  * 登录日志：只读分页查询。
- * - 数据源 GET /api/log/login（RBAC monitor:log:login，DataScope 已在 DAO 应用）
+ * - 数据源 GET /api/log/login
  * - 搜索 username（模糊）/ip（精确）/status/startTime/endTime
  * - Dayjs 时间值在 api 包装层统一转 YYYY-MM-DD HH:mm:ss
  */

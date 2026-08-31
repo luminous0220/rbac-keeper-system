@@ -3,7 +3,7 @@ package middleware
 import (
 	"github.com/gin-gonic/gin"
 
-	"rbackeeper/internal/service"
+	logmod "rbackeeper/internal/log"
 	"rbackeeper/response"
 	"rbackeeper/utils"
 	"rbackeeper/utils/casbinx"
@@ -34,7 +34,7 @@ func RBAC(obj, act string) gin.HandlerFunc {
 		}
 		if !ok {
 			// 异步记录越权日志（不阻塞业务响应）
-			service.CreateLogWithMq(c, "权限拒绝")
+			logmod.CreateWithMq(c, "权限拒绝")
 			response.Fail(c, response.ErrForbidden, "无权限访问")
 			c.Abort()
 			return

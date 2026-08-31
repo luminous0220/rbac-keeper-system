@@ -3,10 +3,11 @@ package middleware
 import (
 	"github.com/gin-gonic/gin"
 
+	"rbackeeper/constants"
 	"rbackeeper/global"
-	"rbackeeper/internal/constants"
-	"rbackeeper/internal/dao"
-	"rbackeeper/internal/model"
+	"rbackeeper/internal/dept"
+	"rbackeeper/internal/user"
+	"rbackeeper/model"
 	"rbackeeper/utils"
 )
 
@@ -35,13 +36,13 @@ func DataScope() gin.HandlerFunc {
 		// }
 		// 取用户全部角色
 		// 这里必须全量查询，第一个参数传 nil
-		user, err := dao.GetUserInfoByUsernameScoped(nil, global.DB, claims.Username)
-		if err != nil || user == nil {
+		u, err := user.GetUserInfoByUsernameScoped(nil, global.DB, claims.Username)
+		if err != nil || u == nil {
 			setScope(constants.DsSelf, nil, 0, claims.UserID)
 			c.Next()
 			return
 		}
-		scope, depts, deptID, uid := computeScope(user)
+		scope, depts, deptID, uid := computeScope(u)
 		setScope(scope, depts, deptID, uid)
 		c.Next()
 	}
@@ -49,12 +50,12 @@ func DataScope() gin.HandlerFunc {
 
 // 取最宽权限（min(data_scope)）。
 // 返回：(scope, customDepts, deptID, userID)
-func computeScope(user *model.User) (int8, []uint, uint, uint) {
-	if len(user.Roles) == 0 {
-		return constants.DsSelf, nil, 0, user.ID
+func computeScope(u *model.User) (int8, []uint, uint, uint) {
+	if len(u.Roles) == 0 {
+		return constants.DsSelf, nil, 0, u.ID
 	}
 	scope := constants.DsSelf
-	for _, r := range user.Roles {
+	for _, r := range u.Roles {
 		if r.DataScope < scope {
 			scope = r.DataScope
 		}
@@ -65,36 +66,36 @@ func computeScope(user *model.User) (int8, []uint, uint, uint) {
 		return constants.DsAll, nil, 0, 0
 	// 仅自己
 	case constants.DsSelf:
-		return constants.DsSelf, nil, user.DeptID, user.ID
+		return constants.DsSelf, nil, u.DeptID, u.ID
 	// 仅本部门
 	case constants.DsDept:
-		return constants.DsDept, nil, user.DeptID, 0
+		return constants.DsDept, nil, u.DeptID, 0
 	// 本部门及子部门、自定义
 	case constants.DsSubDept, constants.DsCustom:
 		ids := map[uint]struct{}{}
-		if scope == constants.DsSubDept && user.DeptID > 0 {
+		if scope == constants.DsSubDept && u.DeptID > 0 {
 			// 计算"本部门及以下"需要全量部门树，不应用数据权限
-			all, err := dao.GetAllDeptsScoped(nil, nil)
+			all, err := dept.GetAllDeptsScoped(nil, nil)
 			if err == nil {
 				for _, id := range utils.CollectSubtreeIDs(all,
 					func(d model.Dept) uint { return d.ID },
 					func(d model.Dept) uint { return d.ParentID },
-					user.DeptID,
+					u.DeptID,
 				) {
 					ids[id] = struct{}{}
 				}
 			}
 		} else {
 			// DsCustom：聚合所有角色的 role_depts
-			for _, r := range user.Roles {
+			for _, r := range u.Roles {
 				for _, d := range r.Depts {
 					ids[d.ID] = struct{}{}
 				}
 			}
 		}
 		// 保证用户对自己的部门/自己可见且可管理（DsSubDept 已以本部门为根，此处为幂等）
-		if user.DeptID > 0 {
-			ids[user.DeptID] = struct{}{}
+		if u.DeptID > 0 {
+			ids[u.DeptID] = struct{}{}
 		}
 		out := make([]uint, 0, len(ids))
 		for k := range ids {
@@ -103,6 +104,6 @@ func computeScope(user *model.User) (int8, []uint, uint, uint) {
 		return scope, out, 0, 0
 	// 默认
 	default:
-		return constants.DsSelf, nil, 0, user.ID
+		return constants.DsSelf, nil, 0, u.ID
 	}
 }

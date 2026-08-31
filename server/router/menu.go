@@ -5,23 +5,23 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"rbackeeper/internal/controller"
+	"rbackeeper/internal/menu"
 	"rbackeeper/middleware"
 )
 
 // registerMenuRoutes 菜单模块（权限标识 system:menu:*）
 func registerMenuRoutes(base *gin.RouterGroup) {
-	menu := &controller.MenuController{}
+	mc := &menu.Controller{}
 	mg := base.Group("/menu")
 	mg.Use(middleware.JWTAuth(), middleware.RateLimit(50, 100), middleware.CaptureBody())
 	{
 		// 菜单树（目录/菜单/按钮三层结构）
-		mg.GET("/tree", middleware.RBAC("system:menu:list", "*"), menu.Tree)
+		mg.GET("/tree", middleware.RBAC("system:menu:list", "*"), mc.Tree)
 		// 新增菜单
-		mg.POST("/add", middleware.Idempotent(10*time.Second), middleware.RBAC("system:menu:add", "*"), menu.Add)
+		mg.POST("/add", middleware.Idempotent(10*time.Second), middleware.RBAC("system:menu:add", "*"), mc.Add)
 		// 编辑菜单（含 ParentID 循环引用校验）
-		mg.POST("/edit", middleware.Idempotent(10*time.Second), middleware.RBAC("system:menu:edit", "*"), menu.Edit)
+		mg.POST("/edit", middleware.Idempotent(10*time.Second), middleware.RBAC("system:menu:edit", "*"), mc.Edit)
 		// 删除菜单（级联清理 role_menus）
-		mg.POST("/delete", middleware.Idempotent(10*time.Second), middleware.RBAC("system:menu:remove", "*"), menu.Delete)
+		mg.POST("/delete", middleware.Idempotent(10*time.Second), middleware.RBAC("system:menu:remove", "*"), mc.Delete)
 	}
 }

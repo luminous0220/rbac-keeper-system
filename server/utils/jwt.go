@@ -2,8 +2,8 @@ package utils
 
 import (
 	"errors"
+	"rbackeeper/constants"
 	"rbackeeper/global"
-	"rbackeeper/internal/constants"
 	"time"
 
 	"github.com/gin-gonic/gin"

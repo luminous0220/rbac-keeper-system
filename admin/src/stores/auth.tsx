@@ -13,8 +13,6 @@ export interface AuthState {
 	perms: string[];
 	/** 角色标识列表（多角色） */
 	roleKeys: string[];
-	/** 数据权限最小值（1全部 2自定义 3本部门 4本部门及以下 5仅本人） */
-	dataScope: number;
 	/** 自定义数据权限部门并集（role_depts 汇总） */
 	depts: IApi.DeptRaw[];
 }
@@ -33,7 +31,6 @@ const initialAuthState: AuthState = {
 	menus: [],
 	perms: [],
 	roleKeys: [],
-	dataScope: 5,
 	depts: [],
 };
 

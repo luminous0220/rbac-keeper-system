@@ -47,7 +47,7 @@ function joinPath(parent: string, child: string): string {
  */
 export const buildMenuTree = (flat: IApi.MenuRaw[]): IApi.MenuRaw[] => {
 	const nodes = flat
-		.filter((m) => m.status === 1 && m.menu_type !== "F")
+		.filter((m) => m.menu_type !== "F")
 		.slice()
 		.sort((a, b) => a.order_num - b.order_num);
 
@@ -105,7 +105,7 @@ const dynamicImport = (componentPath: string) => {
 	const modules = import.meta.glob("@/pages/**/*.tsx");
 	const path = `/src/pages/${componentPath}`;
 	if (modules[path]) {
-		return modules[path]
+		return modules[path];
 	}
 	const path2 = `/src/pages${componentPath}`;
 	if (modules[path2]) {
