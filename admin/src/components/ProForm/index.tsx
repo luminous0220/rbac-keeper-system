@@ -52,6 +52,7 @@ export const ProForm = forwardRef<ProFormInstance, ProFormProps>(
 			form: externalForm,
 			type = "modal",
 			width,
+			zIndex,
 			destroyOnHidden = false,
 			confirmOnClose = true,
 			onClose,
@@ -405,6 +406,7 @@ export const ProForm = forwardRef<ProFormInstance, ProFormProps>(
 					onClose={close}
 					title={title ? title : modalTitle}
 					size={width ?? 520}
+					zIndex={zIndex}
 					destroyOnHidden={destroyOnHidden}
 					footer={
 						footer ? (
@@ -444,6 +446,7 @@ export const ProForm = forwardRef<ProFormInstance, ProFormProps>(
 				onCancel={close}
 				title={title ? title : modalTitle}
 				width={width}
+				zIndex={zIndex}
 				destroyOnHidden={destroyOnHidden}
 				footer={
 					footer ? (

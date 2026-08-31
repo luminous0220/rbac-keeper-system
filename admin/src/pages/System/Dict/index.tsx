@@ -1,19 +1,26 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { App, Button, Popconfirm, Tabs, Tag, Typography } from "antd";
-import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
+import { useCallback, useMemo, useRef, useState } from "react";
+import { App, Button, Popconfirm, Tag, Typography } from "antd";
+import {
+	PlusOutlined,
+	EditOutlined,
+	DeleteOutlined,
+	EyeOutlined,
+} from "@ant-design/icons";
 import { ProTable } from "@/components/ProTable";
 import type { ProTableRef, ProTableColumnType } from "@/components/ProTable";
 import { ProForm } from "@/components/ProForm";
 import type { ProFormFields, ProFormInstance } from "@/components/ProForm";
+import { TableModalView } from "@/components/TableModalView";
+import type { TableModalViewRef } from "@/components/TableModalView";
 import { Api, IApi } from "@/apis";
 import { usePerms } from "@/hooks";
 import dayjs from "dayjs";
 
-// 字典类型/数据状态：0停用 1正常 （model.DictType/DictData）
-const STATUS_TEXT: Record<number, string> = { 0: "正常", 1: "停用" };
+// 字典类型/数据状态：0停用 1正常（model.DictType/DictData，与 constants.StatusDisabled/Enabled 一致）
+const STATUS_TEXT: Record<number, string> = { 0: "停用", 1: "正常" };
 const STATUS_OPTIONS = [
-	{ label: "正常", value: 0 },
-	{ label: "停用", value: 1 },
+	{ label: "正常", value: 1 },
+	{ label: "停用", value: 0 },
 ];
 // 是否默认：0否 1是
 const DEFAULT_TEXT: Record<number, string> = { 0: "否", 1: "是" };
@@ -22,21 +29,38 @@ const DEFAULT_OPTIONS = [
 	{ label: "是", value: 1 },
 ];
 
-// ==================== 字典类型 Tab ====================
-
-const DictTypeTab: React.FC<{ onViewData: () => void }> = ({ onViewData }) => {
-	const { message } = App.useApp();
+/**
+ * 字典管理：主从结构（无 Tab）。
+ * - 主表：字典类型 CRUD（编码变更后端联动迁移数据与缓存）
+ * - 详情：点击「查看数据」用 TableModalView 弹出该类型下的字典数据表（含增删改查）
+ * - 本页不调用 /api/dict/data/type（按计划，仅管理端列表 CRUD）
+ */
+const DictPage: React.FC = () => {
+	const { message, modal } = App.useApp();
 	const { hasPerm } = usePerms();
-	const tableRef = useRef<ProTableRef<IApi.DictTypeItem>>(null);
-	const formRef = useRef<ProFormInstance>(null);
-	// 区分当前弹窗是新增还是编辑，并保存编辑时的记录
-	const [formMode, setFormMode] = useState<{
+
+	// ==================== 字典类型（主表） ====================
+	const typeTableRef = useRef<ProTableRef<IApi.DictTypeItem>>(null);
+	const typeFormRef = useRef<ProFormInstance>(null);
+	const [typeFormMode, setTypeFormMode] = useState<{
 		type: "add" | "edit";
 		record?: IApi.DictTypeItem;
 	}>({ type: "add" });
+	// 主表选中行（批量删除用）
+	const [selectedTypes, setSelectedTypes] = useState<IApi.DictTypeItem[]>([]);
 
-	// 动态生成字段：编辑与新增字段结构相同，仅 initialValues 不同
-	const getFormFields = useCallback((): ProFormFields => {
+	// ==================== 字典数据（弹窗） ====================
+	const dataModalRef = useRef<TableModalViewRef<IApi.DictDataItem>>(null);
+	const dataFormRef = useRef<ProFormInstance>(null);
+	const [dataFormMode, setDataFormMode] = useState<{
+		type: "add" | "edit";
+		record?: IApi.DictDataItem;
+	}>({ type: "add" });
+	// 弹窗内选中行：toolbarExtra 在 open 时被冻结，用 ref 在点击时读取当前选中
+	const selectedDataRef = useRef<IApi.DictDataItem[]>([]);
+
+	// ---------- 字典类型：表单 ----------
+	const getTypeFormFields = useCallback((): ProFormFields => {
 		return [
 			{
 				type: "input",
@@ -71,19 +95,17 @@ const DictTypeTab: React.FC<{ onViewData: () => void }> = ({ onViewData }) => {
 		];
 	}, []);
 
-	// 打开新增
-	const openAdd = useCallback(() => {
-		setFormMode({ type: "add" });
-		formRef.current?.open({
+	const openTypeAdd = useCallback(() => {
+		setTypeFormMode({ type: "add" });
+		typeFormRef.current?.open({
 			title: "新增字典类型",
-			initialValues: { status: 0 },
+			initialValues: { status: 1 },
 		});
 	}, []);
 
-	// 打开编辑
-	const openEdit = useCallback((record: IApi.DictTypeItem) => {
-		setFormMode({ type: "edit", record });
-		formRef.current?.open({
+	const openTypeEdit = useCallback((record: IApi.DictTypeItem) => {
+		setTypeFormMode({ type: "edit", record });
+		typeFormRef.current?.open({
 			title: `编辑字典类型：${record.dict_name}`,
 			initialValues: {
 				dictName: record.dict_name,
@@ -94,8 +116,7 @@ const DictTypeTab: React.FC<{ onViewData: () => void }> = ({ onViewData }) => {
 		});
 	}, []);
 
-	// 统一提交
-	const handleFormSubmit = useCallback(
+	const handleTypeSubmit = useCallback(
 		async (
 			_title: string,
 			values: Record<string, any>,
@@ -106,204 +127,30 @@ const DictTypeTab: React.FC<{ onViewData: () => void }> = ({ onViewData }) => {
 				dictType: values.dictType,
 				status: values.status,
 			};
-			if (formMode.type === "add") {
+			if (typeFormMode.type === "add") {
 				await Api.addDictType(payload);
 				message.success("新增字典类型成功");
 			} else {
-				const id = extraParams?.id as number;
-				await Api.editDictType(id, payload);
+				await Api.editDictType(extraParams?.id as number, payload);
 				message.success("修改字典类型成功");
 			}
-			tableRef.current?.refresh();
+			typeTableRef.current?.refresh();
 		},
-		[formMode.type, message],
+		[typeFormMode.type, message],
 	);
 
-	const handleDelete = useCallback(
+	const handleTypeDelete = useCallback(
 		async (record: IApi.DictTypeItem) => {
 			await Api.deleteDictType(record.id);
 			message.success("删除字典类型成功");
-			tableRef.current?.refresh();
+			typeTableRef.current?.refresh();
 		},
 		[message],
 	);
 
-	const columns: ProTableColumnType<IApi.DictTypeItem>[] = [
-		{ title: "字典名称", dataIndex: "dict_name", width: 180 },
-		{
-			title: "字典类型",
-			dataIndex: "dict_type",
-			width: 200,
-			render: (value) => (
-				<Typography.Text code>{value as string}</Typography.Text>
-			),
-		},
-		{
-			title: "状态",
-			dataIndex: "status",
-			width: 80,
-			render: (value) => (
-				<Tag color={(value as number) === 0 ? "green" : "red"}>
-					{STATUS_TEXT[(value as number) ?? 0] ?? "-"}
-				</Tag>
-			),
-		},
-		{
-			title: "创建时间",
-			dataIndex: "createdAt",
-			width: 170,
-			render: (time) => dayjs(time).format("YYYY-MM-DD HH:mm:ss"),
-		},
-		{
-			title: "操作",
-			key: "action",
-			width: 240,
-			fixed: "right",
-			render: (_, record) => (
-				<div className="flex items-center gap-2">
-					<Button
-						size="small"
-						color="primary"
-						variant="filled"
-						icon={<PlusOutlined />}
-						onClick={onViewData}
-					>
-						查看数据
-					</Button>
-					{hasPerm("system:dict:type:edit") && (
-						<Button
-							size="small"
-							color="primary"
-							variant="filled"
-							icon={<EditOutlined />}
-							onClick={() => openEdit(record)}
-						>
-							编辑
-						</Button>
-					)}
-					{hasPerm("system:dict:type:delete") && (
-						<Popconfirm
-							title="确定删除该字典类型吗？"
-							description="将级联删除该类型下的全部字典数据"
-							okText="删除"
-							cancelText="取消"
-							okButtonProps={{ danger: true }}
-							onConfirm={() => handleDelete(record)}
-						>
-							<Button
-								size="small"
-								color="danger"
-								variant="filled"
-								icon={<DeleteOutlined />}
-							>
-								删除
-							</Button>
-						</Popconfirm>
-					)}
-				</div>
-			),
-		},
-	];
-
-	return (
-		<>
-			<ProTable<IApi.DictTypeItem>
-				ref={tableRef}
-				rowKey="id"
-				api={Api.getDictTypeList}
-				columns={columns}
-				title="字典类型"
-				toolbarExtra={
-					hasPerm("system:dict:type:add") ? (
-						<Button
-							type="primary"
-							icon={<PlusOutlined />}
-							onClick={openAdd}
-						>
-							新增类型
-						</Button>
-					) : undefined
-				}
-				search={{
-					fields: [
-						{ type: "input", label: "字典名称", name: "dictName" },
-						{ type: "input", label: "字典类型", name: "dictType" },
-						{
-							type: "select",
-							label: "状态",
-							name: "status",
-							fieldProps: { options: STATUS_OPTIONS, allowClear: true },
-						},
-					],
-				}}
-			/>
-			<ProForm
-				ref={formRef}
-				fields={getFormFields()}
-				onConfirm={handleFormSubmit}
-				width={520}
-			/>
-		</>
-	);
-};
-
-// ==================== 字典数据 Tab ====================
-
-const DictDataTab: React.FC = () => {
-	const { message } = App.useApp();
-	const { hasPerm } = usePerms();
-	const tableRef = useRef<ProTableRef<IApi.DictDataItem>>(null);
-	const formRef = useRef<ProFormInstance>(null);
-	// 区分当前弹窗是新增还是编辑，并保存编辑时的记录
-	const [formMode, setFormMode] = useState<{
-		type: "add" | "edit";
-		record?: IApi.DictDataItem;
-	}>({ type: "add" });
-	const [typeOptions, setTypeOptions] = useState<
-		{ label: string; value: string }[]
-	>([]);
-	// 最近一次查询使用的字典类型：新增数据时作为默认归属
-	const [lastType, setLastType] = useState<string>();
-
-	useEffect(() => {
-		Api.getDictTypeList({ pageNumber: 1, pageSize: 100 })
-			.then((res) =>
-				setTypeOptions(
-					res.data.map((t) => ({ label: t.dict_name, value: t.dict_type })),
-				),
-			)
-			.catch((err) => console.error("加载字典类型失败", err));
-	}, []);
-
-	// 列表：dictType/dictLabel/status 透传（dictType 为空 = 不筛选，展示全部）
-	const dictDataApi = useCallback(async (params: Record<string, unknown>) => {
-		const dictType = params.dictType ? String(params.dictType) : undefined;
-		setLastType(dictType);
-		return Api.getDictDataList({
-			pageNumber: params.pageNumber as number,
-			pageSize: params.pageSize as number,
-			dictType,
-			dictLabel: params.dictLabel ? String(params.dictLabel) : undefined,
-			status: params.status as number | undefined,
-		});
-	}, []);
-
-	// 动态生成字段：编辑 mode 下 dictType 置灰
-	const getFormFields = useCallback((): ProFormFields => {
-		const isEdit = formMode.type === "edit";
+	// ---------- 字典数据：表单 ----------
+	const getDataFormFields = useCallback((): ProFormFields => {
 		return [
-			{
-				type: "select",
-				label: "字典类型",
-				name: "dictType",
-				disabled: isEdit,
-				fieldProps: {
-					options: typeOptions,
-					placeholder: isEdit ? "所属类型不可修改" : "请选择所属字典类型",
-					showSearch: true,
-				},
-				rules: [{ required: true, message: "请选择字典类型" }],
-			},
 			{
 				type: "input",
 				label: "数据标签",
@@ -340,6 +187,9 @@ const DictDataTab: React.FC = () => {
 				type: "input",
 				label: "回显样式",
 				name: "listClass",
+				formItemProps: {
+					className: "col-span-2",
+				},
 				fieldProps: {
 					maxLength: 100,
 					placeholder: "如 success / danger / warning（选填）",
@@ -360,30 +210,23 @@ const DictDataTab: React.FC = () => {
 				rules: [{ required: true, message: "请选择状态" }],
 			},
 		];
-	}, [formMode.type, typeOptions]);
+	}, []);
 
-	// 打开新增
-	const openAdd = useCallback(() => {
-		setFormMode({ type: "add" });
-		formRef.current?.open({
-			title: "新增字典数据",
-			// 默认归属最近筛选的字典类型（未筛选则手动选择）
-			initialValues: {
-				dictType: lastType,
-				dictSort: 0,
-				isDefault: 0,
-				status: 0,
-			},
+	// 新增：dict_type 通过 extraParams 带入，提交时取用（无需依赖外部状态）
+	const openDataAdd = useCallback((type: IApi.DictTypeItem) => {
+		setDataFormMode({ type: "add" });
+		dataFormRef.current?.open({
+			title: `新增字典数据：${type.dict_name}`,
+			initialValues: { dictSort: 0, isDefault: 0, status: 1 },
+			extraParams: { dictType: type.dict_type },
 		});
-	}, [lastType]);
+	}, []);
 
-	// 打开编辑
-	const openEdit = useCallback((record: IApi.DictDataItem) => {
-		setFormMode({ type: "edit", record });
-		formRef.current?.open({
+	const openDataEdit = useCallback((record: IApi.DictDataItem) => {
+		setDataFormMode({ type: "edit", record });
+		dataFormRef.current?.open({
 			title: `编辑字典数据：${record.dict_label}`,
 			initialValues: {
-				dictType: record.dict_type,
 				dictLabel: record.dict_label,
 				dictValue: record.dict_value,
 				dictSort: record.dict_sort,
@@ -396,8 +239,7 @@ const DictDataTab: React.FC = () => {
 		});
 	}, []);
 
-	// 统一提交
-	const handleFormSubmit = useCallback(
+	const handleDataSubmit = useCallback(
 		async (
 			_title: string,
 			values: Record<string, any>,
@@ -412,65 +254,235 @@ const DictDataTab: React.FC = () => {
 				isDefault: values.isDefault,
 				status: values.status,
 			};
-			if (formMode.type === "add") {
+			if (dataFormMode.type === "add") {
 				await Api.addDictData({
 					...payload,
-					dictType: values.dictType,
+					dictType: extraParams?.dictType as string,
 				});
 				message.success("新增字典数据成功");
 			} else {
-				const id = extraParams?.id as number;
-				await Api.editDictData(id, payload);
+				await Api.editDictData(extraParams?.id as number, payload);
 				message.success("修改字典数据成功");
 			}
-			tableRef.current?.refresh();
+			// 直接刷新弹窗内表格（TableModalView 暴露了内部 ProTable 的 refresh）
+			dataModalRef.current?.refresh();
 		},
-		[formMode.type, message],
+		[dataFormMode.type, message],
 	);
 
-	const handleDelete = useCallback(
+	const handleDataDelete = useCallback(
 		async (record: IApi.DictDataItem) => {
 			await Api.deleteDictData(record.id);
 			message.success("删除字典数据成功");
-			tableRef.current?.refresh();
+			dataModalRef.current?.refresh();
 		},
 		[message],
 	);
 
-	const columns: ProTableColumnType<IApi.DictDataItem>[] = [
-		{ title: "数据标签", dataIndex: "dict_label", width: 140 },
+	// 弹窗内选中变化：写入 ref，供批量删除按钮点击时读取当前选中
+	const handleSelectData = useCallback((rows: IApi.DictDataItem[]) => {
+		selectedDataRef.current = rows;
+	}, []);
+
+	const handleBatchDeleteData = useCallback(() => {
+		const rows = selectedDataRef.current;
+		if (!rows.length) {
+			message.warning("请先选择要删除的字典数据");
+			return;
+		}
+		modal.confirm({
+			title: "批量删除字典数据",
+			content: `确定删除选中的 ${rows.length} 个字典数据吗？`,
+			okText: "删除",
+			cancelText: "取消",
+			okButtonProps: { danger: true },
+			onOk: async () => {
+				await Api.deleteDictDatas(rows.map((r) => r.id));
+				message.success("批量删除字典数据成功");
+				dataModalRef.current?.clearSelected();
+				dataModalRef.current?.refresh();
+			},
+		});
+	}, [modal, message]);
+
+	const handleBatchDeleteTypes = useCallback(() => {
+		if (!selectedTypes.length) {
+			message.warning("请先选择要删除的字典类型");
+			return;
+		}
+		modal.confirm({
+			title: "批量删除字典类型",
+			content: `确定删除选中的 ${selectedTypes.length} 个字典类型吗？将级联删除这些类型下的全部字典数据。`,
+			okText: "删除",
+			cancelText: "取消",
+			okButtonProps: { danger: true },
+			onOk: async () => {
+				await Api.deleteDictTypes(selectedTypes.map((t) => t.id));
+				message.success("批量删除字典类型成功");
+				typeTableRef.current?.clearSelected();
+				typeTableRef.current?.refresh();
+			},
+		});
+	}, [selectedTypes, modal, message]);
+
+	// ---------- 字典数据：弹窗表格列 ----------
+	const dataColumns = useMemo<ProTableColumnType<IApi.DictDataItem>[]>(
+		() => [
+			{ title: "数据标签", dataIndex: "dict_label", width: 140 },
+			{
+				title: "数据键值",
+				dataIndex: "dict_value",
+				width: 140,
+				render: (value) => (
+					<Typography.Text code>{value as string}</Typography.Text>
+				),
+			},
+			{ title: "显示顺序", dataIndex: "dict_sort", width: 90 },
+			{
+				title: "默认",
+				dataIndex: "is_default",
+				width: 70,
+				render: (value) => (
+					<Tag color={(value as number) === 1 ? "blue" : "default"}>
+						{DEFAULT_TEXT[(value as number) ?? 0] ?? "-"}
+					</Tag>
+				),
+			},
+			{
+				title: "回显样式",
+				dataIndex: "list_class",
+				width: 100,
+				render: (value) => (value ? <Tag>{value as string}</Tag> : "-"),
+			},
+			{
+				title: "状态",
+				dataIndex: "status",
+				width: 80,
+				render: (value) => (
+					<Tag color={(value as number) === 1 ? "green" : "red"}>
+						{STATUS_TEXT[(value as number) ?? 0] ?? "-"}
+					</Tag>
+				),
+			},
+			{
+				title: "创建时间",
+				dataIndex: "createdAt",
+				width: 170,
+				render: (time) => dayjs(time).format("YYYY-MM-DD HH:mm:ss"),
+			},
+			{
+				title: "操作",
+				key: "action",
+				width: 180,
+				fixed: "right",
+				render: (_, record) => (
+					<div className="flex items-center gap-2">
+						{hasPerm("system:dict:data:edit") && (
+							<Button
+								size="small"
+								color="primary"
+								variant="filled"
+								icon={<EditOutlined />}
+								onClick={() => openDataEdit(record)}
+							>
+								编辑
+							</Button>
+						)}
+						{hasPerm("system:dict:data:delete") && (
+							<Popconfirm
+								title="确定删除该字典数据吗？"
+								okText="删除"
+								cancelText="取消"
+								okButtonProps={{ danger: true }}
+								onConfirm={() => handleDataDelete(record)}
+							>
+								<Button
+									size="small"
+									color="danger"
+									variant="filled"
+									icon={<DeleteOutlined />}
+								>
+									删除
+								</Button>
+							</Popconfirm>
+						)}
+					</div>
+				),
+			},
+		],
+		[hasPerm, openDataEdit, handleDataDelete],
+	);
+
+	// 打开某类型的数据弹窗：api/toolbarExtra 按当前记录闭包生成，数据变更后走 ref.refresh
+	const openData = useCallback(
+		(record: IApi.DictTypeItem) => {
+			// 重置选中，避免上次弹窗的选中残留
+			selectedDataRef.current = [];
+			dataModalRef.current?.open({
+				title: `字典数据：${record.dict_name}`,
+				columns: dataColumns,
+				api: (params: Record<string, unknown>) =>
+					Api.getDictDataList({
+						pageNumber: params.pageNumber as number,
+						pageSize: params.pageSize as number,
+						dictType: record.dict_type,
+						dictLabel: params.dictLabel
+							? String(params.dictLabel)
+							: undefined,
+						status: params.status as number | undefined,
+					}),
+				onSelectRows: handleSelectData,
+				toolbarExtra: (
+					<>
+						{hasPerm("system:dict:data:add") && (
+							<Button
+								type="primary"
+								icon={<PlusOutlined />}
+								onClick={() => openDataAdd(record)}
+							>
+								新增数据
+							</Button>
+						)}
+						{hasPerm("system:dict:data:delete") && (
+							<Button danger onClick={handleBatchDeleteData}>
+								批量删除
+							</Button>
+						)}
+					</>
+				),
+				search: {
+					fields: [
+						{ type: "input", label: "数据标签", name: "dictLabel" },
+						{
+							type: "select",
+							label: "状态",
+							name: "status",
+							fieldProps: { options: STATUS_OPTIONS, allowClear: true },
+						},
+					],
+				},
+			});
+		},
+		[dataColumns, hasPerm, openDataAdd, handleSelectData, handleBatchDeleteData],
+	);
+
+	// ---------- 字典类型：主表列 ----------
+	const typeColumns: ProTableColumnType<IApi.DictTypeItem>[] = [
+		{ title: "字典名称", dataIndex: "dict_name", width: 180 },
 		{
-			title: "数据键值",
-			dataIndex: "dict_value",
-			width: 140,
+			title: "字典类型",
+			dataIndex: "dict_type",
+			width: 200,
 			render: (value) => (
 				<Typography.Text code>{value as string}</Typography.Text>
 			),
-		},
-		{ title: "字典类型", dataIndex: "dict_type", width: 170 },
-		{ title: "显示顺序", dataIndex: "dict_sort", width: 90 },
-		{
-			title: "默认",
-			dataIndex: "is_default",
-			width: 70,
-			render: (value) => (
-				<Tag color={(value as number) === 1 ? "blue" : "default"}>
-					{DEFAULT_TEXT[(value as number) ?? 0] ?? "-"}
-				</Tag>
-			),
-		},
-		{
-			title: "回显样式",
-			dataIndex: "list_class",
-			width: 100,
-			render: (value) => (value ? <Tag>{value as string}</Tag> : "-"),
 		},
 		{
 			title: "状态",
 			dataIndex: "status",
 			width: 80,
 			render: (value) => (
-				<Tag color={(value as number) === 0 ? "green" : "red"}>
+				<Tag color={(value as number) === 1 ? "green" : "red"}>
 					{STATUS_TEXT[(value as number) ?? 0] ?? "-"}
 				</Tag>
 			),
@@ -484,28 +496,40 @@ const DictDataTab: React.FC = () => {
 		{
 			title: "操作",
 			key: "action",
-			width: 180,
+			width: 260,
 			fixed: "right",
 			render: (_, record) => (
 				<div className="flex items-center gap-2">
-					{hasPerm("system:dict:data:edit") && (
+					{hasPerm("system:dict:data:list") && (
+						<Button
+							size="small"
+							color="primary"
+							variant="filled"
+							icon={<EyeOutlined />}
+							onClick={() => openData(record)}
+						>
+							查看数据
+						</Button>
+					)}
+					{hasPerm("system:dict:type:edit") && (
 						<Button
 							size="small"
 							color="primary"
 							variant="filled"
 							icon={<EditOutlined />}
-							onClick={() => openEdit(record)}
+							onClick={() => openTypeEdit(record)}
 						>
 							编辑
 						</Button>
 					)}
-					{hasPerm("system:dict:data:delete") && (
+					{hasPerm("system:dict:type:delete") && (
 						<Popconfirm
-							title="确定删除该字典数据吗？"
+							title="确定删除该字典类型吗？"
+							description="将级联删除该类型下的全部字典数据"
 							okText="删除"
 							cancelText="取消"
 							okButtonProps={{ danger: true }}
-							onConfirm={() => handleDelete(record)}
+							onConfirm={() => handleTypeDelete(record)}
 						>
 							<Button
 								size="small"
@@ -524,37 +548,41 @@ const DictDataTab: React.FC = () => {
 
 	return (
 		<>
-			<ProTable<IApi.DictDataItem>
-				ref={tableRef}
+			<ProTable<IApi.DictTypeItem>
+				ref={typeTableRef}
 				rowKey="id"
-				api={dictDataApi}
-				columns={columns}
-				title="字典数据"
+				api={Api.getDictTypeList}
+				columns={typeColumns}
+				title="字典类型"
+				onSelectRows={setSelectedTypes}
 				toolbarExtra={
-					hasPerm("system:dict:data:add") ? (
-						<Button
-							type="primary"
-							icon={<PlusOutlined />}
-							onClick={openAdd}
-						>
-							新增数据
-						</Button>
-					) : undefined
+					<>
+						{hasPerm("system:dict:type:add") && (
+							<Button
+								type="primary"
+								icon={<PlusOutlined />}
+								onClick={openTypeAdd}
+							>
+								新增类型
+							</Button>
+						)}
+						{hasPerm("system:dict:type:delete") && (
+							<Button
+								danger
+								disabled={!selectedTypes.length}
+								onClick={handleBatchDeleteTypes}
+							>
+								{selectedTypes.length
+									? `批量删除(${selectedTypes.length})`
+									: "批量删除"}
+							</Button>
+						)}
+					</>
 				}
 				search={{
 					fields: [
-						{
-							type: "select",
-							label: "字典类型",
-							name: "dictType",
-							fieldProps: {
-								options: typeOptions,
-								allowClear: true,
-								showSearch: true,
-								placeholder: "全部类型",
-							},
-						},
-						{ type: "input", label: "数据标签", name: "dictLabel" },
+						{ type: "input", label: "字典名称", name: "dictName" },
+						{ type: "input", label: "字典类型", name: "dictType" },
 						{
 							type: "select",
 							label: "状态",
@@ -564,39 +592,22 @@ const DictDataTab: React.FC = () => {
 					],
 				}}
 			/>
+			{/* 数据类型 */}
 			<ProForm
-				ref={formRef}
-				fields={getFormFields()}
-				onConfirm={handleFormSubmit}
-				width={560}
+				ref={typeFormRef}
+				fields={getTypeFormFields()}
+				onConfirm={handleTypeSubmit}
+			/>
+			<TableModalView ref={dataModalRef} title="字典数据" width={1280} />
+			{/* 数据字典（zIndex 高于 TableModalView 弹窗，保证编辑/新增表单悬浮在其上） */}
+			<ProForm
+				ref={dataFormRef}
+				className="grid grid-cols-2 gap-4"
+				zIndex={1100}
+				fields={getDataFormFields()}
+				onConfirm={handleDataSubmit}
 			/>
 		</>
-	);
-};
-
-// ==================== 页面 ====================
-
-/**
- * 字典管理：类型 + 数据两个 Tab。
- * - 类型 Tab：字典类型 CRUD（编码变更后端联动迁移数据与缓存）
- * - 数据 Tab：字典数据 CRUD，按「字典类型/标签/状态」搜索过滤
- * - 本页不调用 /api/dict/data/type（按计划，仅管理端列表 CRUD）
- */
-const DictPage: React.FC = () => {
-	const [activeTab, setActiveTab] = useState("type");
-	return (
-		<Tabs
-			activeKey={activeTab}
-			onChange={setActiveTab}
-			items={[
-				{
-					key: "type",
-					label: "字典类型",
-					children: <DictTypeTab onViewData={() => setActiveTab("data")} />,
-				},
-				{ key: "data", label: "字典数据", children: <DictDataTab /> },
-			]}
-		/>
 	);
 };
 

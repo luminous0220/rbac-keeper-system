@@ -1,8 +1,6 @@
 import { memo } from "react";
 import { Alert, Button } from "antd";
 
-
-
 export const SelectedInfo = memo(function SelectedInfo({
 	selectedCount,
 	onClear,
@@ -27,9 +25,3 @@ export const SelectedInfo = memo(function SelectedInfo({
 		</div>
 	);
 });
-
-/**
- * ProTable 增强表格组件
- * 继承 antd Table 所有 props，并增加自动请求、分页、工具栏等功能
- * 通过 ref 暴露 refresh / getDataSource / clearSelected / reset 等实例方法
- */

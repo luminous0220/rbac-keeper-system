@@ -134,6 +134,8 @@ type ProFormProps = Omit<FormProps, "fields" | "title"> & {
 	type?: ProFormMode;
 	/** Modal/Drawer 宽度，默认 520 */
 	width?: number;
+	/** Modal/Drawer 层级，用于多个弹窗叠加时控制上下顺序 */
+	zIndex?: number;
 	/** 关闭时销毁表单内容 */
 	destroyOnHidden?: boolean;
 	/**

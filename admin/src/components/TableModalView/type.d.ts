@@ -1,10 +1,10 @@
-import type { ProTableProps } from "@/components/ProTable";
+import type { ProTableProps, ProTableRef } from "@/components/ProTable";
 
 /** open() 传入的表格参数 */
 export interface TableModalOpenProps<T = Record<string, any>>
 	extends Omit<
 		ProTableProps<T>,
-		"rowSelection" | "onSelectRows" | "dataSource" | "title"
+		"rowSelection" | "dataSource" | "title"
 	> {
 	/** 弹窗标题（覆盖默认 title） */
 	title?: string;
@@ -18,8 +18,8 @@ export interface TableModalViewProps {
 	width?: number;
 }
 
-/** TableModalView 暴露给父组件的方法 */
-export interface TableModalViewRef<T = Record<string, any>> {
+/** TableModalView 暴露给父组件的方法：open/close + 代理内部 ProTable 实例方法 */
+export interface TableModalViewRef<T = Record<string, any>> extends ProTableRef<T> {
 	/**
 	 * 打开弹窗并渲染 ProTable
 	 * @param props 表格参数（api、columns、search 等）

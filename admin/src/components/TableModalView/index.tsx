@@ -1,7 +1,7 @@
-import { useState, useCallback, forwardRef, useImperativeHandle } from "react";
+import { useState, useCallback, useRef, forwardRef, useImperativeHandle } from "react";
 import { ProModal } from "@/components/ProModal";
 import { ProTable } from "@/components/ProTable";
-import type { ProTableColumnType } from "@/components/ProTable";
+import type { ProTableColumnType, ProTableRef } from "@/components/ProTable";
 import type {
 	TableModalViewProps,
 	TableModalViewRef,
@@ -21,6 +21,7 @@ function TableModalViewInner<T extends Record<string, any> = Record<string, any>
 ) {
 	const [isOpen, setIsOpen] = useState(false);
 	const [tableProps, setTableProps] = useState<TableModalOpenProps<T>>({});
+	const tableRef = useRef<ProTableRef<T>>(null);
 
 	const open = useCallback((props: TableModalOpenProps<T>) => {
 		setTableProps(props);
@@ -31,7 +32,22 @@ function TableModalViewInner<T extends Record<string, any> = Record<string, any>
 		setIsOpen(false);
 	}, []);
 
-	useImperativeHandle(ref, () => ({ open, close }), [open, close]);
+	// 暴露 open/close 及内部 ProTable 实例方法（代理到 tableRef，供父组件直接 refresh 等）
+	useImperativeHandle(
+		ref,
+		() => ({
+			open,
+			close,
+			refresh: () => tableRef.current?.refresh() ?? Promise.resolve(),
+			getDataSource: () => tableRef.current?.getDataSource() ?? [],
+			clearSelected: () => tableRef.current?.clearSelected(),
+			setSearchValues: (values: Record<string, unknown>) =>
+				tableRef.current?.setSearchValues(values),
+			reset: () => tableRef.current?.reset(),
+			setLoading: (loading: boolean) => tableRef.current?.setLoading(loading),
+		}),
+		[open, close],
+	);
 
 	const {
 		title: modalTitle,
@@ -50,6 +66,7 @@ function TableModalViewInner<T extends Record<string, any> = Record<string, any>
 			destroyOnHidden
 		>
 			<ProTable<T>
+				ref={tableRef}
 				columns={columns as ProTableColumnType<T>[]}
 				rowKey={rowKey}
 				index={true}

@@ -3,6 +3,7 @@ package dict
 import (
 	"gorm.io/gorm"
 
+	"rbackeeper/constants"
 	"rbackeeper/global"
 	"rbackeeper/model"
 )
@@ -89,6 +90,32 @@ func DeleteTypeByID(db *gorm.DB, id uint) error {
 	return db.Delete(&model.DictType{}, id).Error
 }
 
+// GetTypesByIDs 按主键批量查询字典类型（批量删除前用于存在性校验与收集编码）
+func GetTypesByIDs(db *gorm.DB, ids []uint) ([]model.DictType, error) {
+	var types []model.DictType
+	err := db.Where("id IN ?", ids).Find(&types).Error
+	return types, err
+}
+
+// DeleteTypesByIDs 逻辑删除多个字典类型并联动软删其下全部字典数据（事务内调用）。
+func DeleteTypesByIDs(db *gorm.DB, ids []uint) error {
+	var types []model.DictType
+	if err := db.Where("id IN ?", ids).Find(&types).Error; err != nil {
+		return err
+	}
+	codes := make([]string, 0, len(types))
+	for _, t := range types {
+		codes = append(codes, t.DictType)
+	}
+	// 联动软删这些类型下的字典数据
+	if len(codes) > 0 {
+		if err := db.Where("dict_type IN ?", codes).Delete(&model.DictData{}).Error; err != nil {
+			return err
+		}
+	}
+	return db.Where("id IN ?", ids).Delete(&model.DictType{}).Error
+}
+
 // ==================== DictData 字典数据 ====================
 
 // GetDataList 分页查询字典数据列表，返回列表与总数。
@@ -119,10 +146,10 @@ func GetDataList(q DictDataListQuery) ([]model.DictData, int64, error) {
 	return list, total, nil
 }
 
-// GetDataByType 查询某字典类型下状态正常(status=0)的数据（缓存回源用，按 dict_sort 排序）。
+// GetDataByType 查询某字典类型下状态正常(status=1)的数据（缓存回源用，按 dict_sort 排序）。
 func GetDataByType(dictType string) ([]model.DictData, error) {
 	var list []model.DictData
-	err := global.DB.Where("dict_type = ? AND status = ?", dictType, 0).
+	err := global.DB.Where("dict_type = ? AND status = ?", dictType, constants.StatusEnabled).
 		Order("dict_sort ASC, id ASC").Find(&list).Error
 	return list, err
 }
@@ -163,4 +190,16 @@ func UpdateDataByID(db *gorm.DB, id uint, updates map[string]any) error {
 // DeleteDataByID 逻辑删除字典数据（事务内调用）
 func DeleteDataByID(db *gorm.DB, id uint) error {
 	return db.Delete(&model.DictData{}, id).Error
+}
+
+// GetDatasByIDs 按主键批量查询字典数据（批量删除前用于存在性校验与收集编码）
+func GetDatasByIDs(db *gorm.DB, ids []uint) ([]model.DictData, error) {
+	var datas []model.DictData
+	err := db.Where("id IN ?", ids).Find(&datas).Error
+	return datas, err
+}
+
+// DeleteDatasByIDs 逻辑删除多个字典数据（事务内调用）
+func DeleteDatasByIDs(db *gorm.DB, ids []uint) error {
+	return db.Where("id IN ?", ids).Delete(&model.DictData{}).Error
 }

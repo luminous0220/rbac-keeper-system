@@ -209,6 +209,13 @@ export const Api = {
 	deleteDictType: (id: number) =>
 		postByIdentifier("/api/dict/type/delete", { id }),
 
+	/** 批量删除字典类型 */
+	deleteDictTypes: (ids: number[]) =>
+		http.post<void>({
+			url: "/api/dict/type/batch-delete",
+			params: { ids },
+		}),
+
 	/** 字典数据分页列表（按 dictType 过滤） */
 	getDictDataList: pageApi<IApi.DictDataItem>("/api/dict/data/list"),
 
@@ -226,6 +233,13 @@ export const Api = {
 	/** 删除字典数据 */
 	deleteDictData: (id: number) =>
 		postByIdentifier("/api/dict/data/delete", { id }),
+
+	/** 批量删除字典数据 */
+	deleteDictDatas: (ids: number[]) =>
+		http.post<void>({
+			url: "/api/dict/data/batch-delete",
+			params: { ids },
+		}),
 
 	// ==================== 日志 ====================
 

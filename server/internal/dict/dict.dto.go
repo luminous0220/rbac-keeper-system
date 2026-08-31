@@ -104,3 +104,15 @@ type DictDataEditBody struct {
 	// 状态 0停用 1正常
 	Status *int8 `json:"status" binding:"omitempty,oneof=0 1"`
 }
+
+// ==================== 批量删除 ====================
+
+// DictTypeBatchDeleteBody 批量删除字典类型（级联清理其下字典数据）
+type DictTypeBatchDeleteBody struct {
+	IDs []uint `json:"ids" binding:"required,min=1"`
+}
+
+// DictDataBatchDeleteBody 批量删除字典数据
+type DictDataBatchDeleteBody struct {
+	IDs []uint `json:"ids" binding:"required,min=1"`
+}

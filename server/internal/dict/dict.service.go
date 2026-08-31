@@ -219,6 +219,35 @@ func TypeDelete(ctx context.Context, id uint) error {
 	return nil
 }
 
+// TypeDeleteBatch 批量删除字典类型：级联软删其下全部字典数据，并按涉及编码清理缓存。
+func TypeDeleteBatch(ctx context.Context, ids []uint) error {
+	types, err := GetTypesByIDs(global.DB, ids)
+	if err != nil {
+		return err
+	}
+	if len(types) == 0 {
+		return response.NewBizError(response.ErrNotFound, "字典类型不存在")
+	}
+
+	// dict_type 有唯一索引，无需去重
+	cacheTypes := make([]string, 0, len(types))
+	for _, t := range types {
+		cacheTypes = append(cacheTypes, t.DictType)
+	}
+	// 延时双删：先删缓存
+	deleteCaches(cacheTypes)
+
+	if err := global.DB.Transaction(func(tx *gorm.DB) error {
+		return DeleteTypesByIDs(tx, ids)
+	}); err != nil {
+		return err
+	}
+
+	// 延时双删：延迟 500ms 再删一次
+	delayedDeleteCaches(cacheTypes)
+	return nil
+}
+
 // ==================== DictData 字典数据 ====================
 
 // DataList 字典数据列表（分页，不走缓存：含停用项，供管理端查看）
@@ -258,12 +287,18 @@ func DataAdd(ctx context.Context, body DictDataAddBody) error {
 		Status:    body.Status,
 	}
 
+	cacheTypes := []string{body.DictType}
+	// 延时双删：先删缓存（新增后下拉/回显需立即可见新数据）
+	deleteCaches(cacheTypes)
+
 	if err := global.DB.Transaction(func(tx *gorm.DB) error {
 		return CreateData(tx, d)
 	}); err != nil {
 		return err
 	}
 
+	// 延时双删：延迟 500ms 再删一次
+	delayedDeleteCaches(cacheTypes)
 	return nil
 }
 
@@ -338,6 +373,39 @@ func DataDelete(ctx context.Context, id uint) error {
 
 	if err := global.DB.Transaction(func(tx *gorm.DB) error {
 		return DeleteDataByID(tx, id)
+	}); err != nil {
+		return err
+	}
+
+	// 延时双删：延迟 500ms 再删一次
+	delayedDeleteCaches(cacheTypes)
+	return nil
+}
+
+// DataDeleteBatch 批量删除字典数据：按涉及编码去重后清理缓存。
+func DataDeleteBatch(ctx context.Context, ids []uint) error {
+	datas, err := GetDatasByIDs(global.DB, ids)
+	if err != nil {
+		return err
+	}
+	if len(datas) == 0 {
+		return response.NewBizError(response.ErrNotFound, "字典数据不存在")
+	}
+
+	// 多条数据可能同属一个 dict_type，去重后一次删除缓存
+	seen := make(map[string]struct{}, len(datas))
+	cacheTypes := make([]string, 0, len(datas))
+	for _, d := range datas {
+		if _, ok := seen[d.DictType]; !ok {
+			seen[d.DictType] = struct{}{}
+			cacheTypes = append(cacheTypes, d.DictType)
+		}
+	}
+	// 延时双删：先删缓存
+	deleteCaches(cacheTypes)
+
+	if err := global.DB.Transaction(func(tx *gorm.DB) error {
+		return DeleteDatasByIDs(tx, ids)
 	}); err != nil {
 		return err
 	}

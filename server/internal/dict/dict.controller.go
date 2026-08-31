@@ -94,6 +94,25 @@ func (dc *Controller) TypeDelete(c *gin.Context) {
 	response.OK(c, nil)
 }
 
+// @Summary 批量删除字典类型
+// @Tags 字典类型
+// @Security BearerAuth
+// @Param body body DictTypeBatchDeleteBody true "-"
+// @Success 200 {object} response.Result[any]
+// @Router /dict/type/batch-delete [post]
+func (dc *Controller) TypeBatchDelete(c *gin.Context) {
+	var body DictTypeBatchDeleteBody
+	if !response.BindJSON(c, &body) {
+		return
+	}
+	if err := TypeDeleteBatch(c.Request.Context(), body.IDs); err != nil {
+		response.FailWithError(c, err)
+		return
+	}
+	log.CreateWithMq(c, "字典类型")
+	response.OK(c, nil)
+}
+
 // ==================== 字典数据 ====================
 
 // @Summary 字典数据列表
@@ -189,6 +208,25 @@ func (dc *Controller) DataDelete(c *gin.Context) {
 		return
 	}
 	if err := DataDelete(c.Request.Context(), query.ID); err != nil {
+		response.FailWithError(c, err)
+		return
+	}
+	log.CreateWithMq(c, "字典数据")
+	response.OK(c, nil)
+}
+
+// @Summary 批量删除字典数据
+// @Tags 字典数据
+// @Security BearerAuth
+// @Param body body DictDataBatchDeleteBody true "-"
+// @Success 200 {object} response.Result[any]
+// @Router /dict/data/batch-delete [post]
+func (dc *Controller) DataBatchDelete(c *gin.Context) {
+	var body DictDataBatchDeleteBody
+	if !response.BindJSON(c, &body) {
+		return
+	}
+	if err := DataDeleteBatch(c.Request.Context(), body.IDs); err != nil {
 		response.FailWithError(c, err)
 		return
 	}
