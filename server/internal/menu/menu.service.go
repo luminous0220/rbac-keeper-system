@@ -9,6 +9,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"gorm.io/gorm"
 
+	"rbackeeper/constants"
 	"rbackeeper/global"
 	"rbackeeper/model"
 	"rbackeeper/response"
@@ -42,12 +43,17 @@ func Tree(ctx context.Context, query MenuTreeQuery) ([]model.Menu, error) {
 
 // Add 新增菜单
 func Add(ctx context.Context, body MenuAddBody) error {
-	// 父菜单存在性（0=根合法）
+	// 父菜单存在性 + 启用校验（0=根合法）
 	if body.ParentID != 0 {
-		if ok, err := ExistsMenuID(global.DB, body.ParentID); err != nil {
+		p, err := GetMenuByID(global.DB, body.ParentID)
+		if err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return response.NewBizError(response.ErrInvalidParam, "父菜单不存在")
+			}
 			return err
-		} else if !ok {
-			return response.NewBizError(response.ErrInvalidParam, "父菜单不存在")
+		}
+		if p.Status == constants.StatusDisabled {
+			return response.NewBizError(response.ErrInvalidParam, "父菜单已停用")
 		}
 	}
 
@@ -129,10 +135,16 @@ func Edit(ctx context.Context, id uint, body MenuEditBody) error {
 	if body.ParentID != nil {
 		newParent := *body.ParentID
 		if newParent != 0 {
-			if ok, err := ExistsMenuID(global.DB, newParent); err != nil {
+			p, err := GetMenuByID(global.DB, newParent)
+			if err != nil {
+				if errors.Is(err, gorm.ErrRecordNotFound) {
+					return response.NewBizError(response.ErrInvalidParam, "父菜单不存在")
+				}
 				return err
-			} else if !ok {
-				return response.NewBizError(response.ErrInvalidParam, "父菜单不存在")
+			}
+			// 仅父菜单变化时校验启用状态（保留原父菜单即使停用也不拦）
+			if newParent != menu.ParentID && p.Status == constants.StatusDisabled {
+				return response.NewBizError(response.ErrInvalidParam, "父菜单已停用")
 			}
 			// 环检测需全量菜单 id->parentID 映射
 			all, err := GetAllMenus(nil)

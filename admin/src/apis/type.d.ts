@@ -84,9 +84,10 @@ export namespace IApi {
 		createdAt: string;
 	}
 
-	/** 本人信息响应（dto.UserInfoResp = UserItem + 角色并集菜单，菜单为扁平 model.Menu） */
-	interface UserInfoResp extends UserItem {
+	/** 当前用户权限响应（dto.PermissionsResp：菜单权限列表 + 数据权限部门列表） */
+	interface PermissionsResp {
 		menus: MenuRaw[];
+		depts: DeptRaw[];
 	}
 
 	/** 新增用户（dto.UserAddBody） */

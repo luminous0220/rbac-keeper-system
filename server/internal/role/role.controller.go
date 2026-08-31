@@ -30,25 +30,6 @@ func (r *Controller) List(c *gin.Context) {
 	response.OK(c, resp)
 }
 
-// @Summary 角色详情（按 roleKey，返回含菜单/部门授权）
-// @Tags 角色
-// @Security BearerAuth
-// @Param roleKey query string true "-"
-// @Success 200 {object} response.Result[any]
-// @Router /role/info [get]
-func (r *Controller) Info(c *gin.Context) {
-	var query common.RoleKeyQuery
-	if !response.BindQuery(c, &query) {
-		return
-	}
-	role, err := Detail(c.Request.Context(), query.RoleKey)
-	if err != nil {
-		response.FailWithError(c, err)
-		return
-	}
-	response.OK(c, role)
-}
-
 // @Summary 新增角色
 // @Tags 角色
 // @Security BearerAuth

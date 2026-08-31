@@ -2,11 +2,14 @@ package auth
 
 import (
 	"context"
+	"errors"
 	"strconv"
 	"sync"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	"github.com/mojocn/base64Captcha"
+	"gorm.io/gorm"
 
 	"rbackeeper/constants"
 	"rbackeeper/global"
@@ -206,7 +209,7 @@ func ResetPassword(ctx context.Context, claims *utils.Claims, body ResetPassword
 
 // UpdateProfile 修改个人信息（仅当前登录用户本人，自作用域无需数据权限）。
 // 指针字段 nil 不修改；返回更新后的本人信息（含角色并集菜单），前端据此同步 store。
-func UpdateProfile(ctx context.Context, claims *utils.Claims, body ProfileBody) (*user.UserInfoResp, error) {
+func UpdateProfile(ctx context.Context, claims *utils.Claims, body ProfileBody) (*user.UserItem, error) {
 	if claims == nil || claims.Username == "" {
 		return nil, response.NewBizError(response.ErrUnauthorized, "登录状态失效，请重新登录")
 	}
@@ -233,6 +236,49 @@ func UpdateProfile(ctx context.Context, claims *utils.Claims, body ProfileBody) 
 		return nil, err
 	}
 	return user.Info(ctx, claims.Username)
+}
+
+// Permissions 返回当前用户的菜单权限列表与数据权限部门列表（引导期权限唯一来源）。
+// 菜单：启用角色并集，去重后剪枝（停用菜单及子孙一并剔除）。
+// 部门：按 dataScope 判断（依赖 DataScope 中间件注入的 scope），并排除停用部门。
+func Permissions(ctx *gin.Context) (*PermissionsResp, error) {
+	claims := utils.GetClaims(ctx)
+	if claims == nil || claims.Username == "" {
+		return nil, response.NewBizError(response.ErrUnauthorized, "登录状态失效，请重新登录")
+	}
+
+	u, err := user.GetUserDetailByUsernameScoped(nil, global.DB, claims.Username)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, response.NewBizError(response.ErrUnauthorized, "用户不存在")
+		}
+		return nil, err
+	}
+
+	menus := make([]*model.Menu, 0)
+	for _, r := range u.Roles {
+		if r.Status != constants.StatusEnabled {
+			continue
+		}
+		menus = append(menus, r.Menus...)
+	}
+	menus = utils.UniqueBy(menus, func(m *model.Menu) uint { return m.ID })
+	menus = utils.PruneSubtrees(menus,
+		func(m *model.Menu) uint { return m.ID },
+		func(m *model.Menu) uint { return m.ParentID },
+		func(m *model.Menu) bool { return m.Status == constants.StatusEnabled },
+	)
+
+	depts := make([]model.Dept, 0)
+	if err := global.DB.Model(&model.Dept{}).
+		Scopes(utils.GetDataScope(ctx)).
+		Where("status = ?", constants.StatusEnabled).
+		Order("order_num ASC, id ASC").
+		Find(&depts).Error; err != nil {
+		return nil, err
+	}
+
+	return &PermissionsResp{Menus: menus, Depts: depts}, nil
 }
 
 // IsTokenRevoked 检查令牌是否已吊销：黑名单（登出）或签发早于密码修改时间（密码重置强制登出）

@@ -3,7 +3,7 @@ import { Navigate, useLocation } from "react-router";
 import { useAuthStore } from "@/stores/auth";
 import { getToken, clearAuthToken } from "@/libs/storage";
 import { CFG } from "@/constants";
-import { Api, IApi } from "@/apis";
+import { Api } from "@/apis";
 import { buildMenuTree } from "./utils";
 interface AuthGuardProps {
 	children: React.ReactNode;
@@ -42,26 +42,28 @@ export const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
 			}
 
 			try {
-				// 1. 本人信息 + 角色并集菜单（权限唯一来源）
-				const info = await Api.getUserInfo();
+				// 1. 并行拉取本人基本信息 + 权限（菜单权限列表 + 数据权限部门列表）
+				const [info, perm] = await Promise.all([
+					Api.getUserInfo(),
+					Api.getPermissions(),
+				]);
 
-				// 2. 逐个角色取明细，汇总数据权限：dataScope 取最小（最宽），depts 取并集
+				// 2. 角色标识（多角色）
 				const roleKeys = info.roles?.map((r) => r.role_key) ?? [];
-				const deptMap = new Map<number, IApi.DeptRaw>();
 
 				// 3. 权限并集：以 F 型按钮 perms 为主；M/C 目录/菜单的 perms 也一并纳入，
 				//    供模块级按钮判断使用（seed 中角色管理缺 system:role:edit 按钮，需用 system:role 兜底）
-				const perms = (info.menus ?? [])
+				const perms = (perm.menus ?? [])
 					.filter((m) => m.perms)
 					.map((m) => m.perms);
 
-				// 4. 写 store：菜单树 / 权限 / 数据范围
+				// 4. 写 store：菜单树 / 权限 / 数据范围（部门列表由后端按 dataScope 返回）
 				setAuthData({
 					userInfo: info,
-					menus: buildMenuTree(info.menus ?? []),
+					menus: buildMenuTree(perm.menus ?? []),
 					perms,
 					roleKeys,
-					depts: [...deptMap.values()],
+					depts: perm.depts ?? [],
 				});
 				setIsOnline(true);
 				setLoading(false);

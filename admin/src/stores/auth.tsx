@@ -5,8 +5,8 @@ import { IApi } from "@/apis";
 // Auth State：登录用户 + 引导期汇总的权限数据
 export interface AuthState {
 	isOnline: boolean;
-	/** 本人信息（含角色并集菜单，来自 /api/user/info） */
-	userInfo: IApi.UserInfoResp | null;
+	/** 本人基本信息（来自 /api/user/info） */
+	userInfo: IApi.UserItem | null;
 	/** 已构建的菜单树（仅启用、含 F 按钮，用于侧边栏/动态路由/按钮权限） */
 	menus: IApi.MenuRaw[];
 	/** 权限并集（F 按钮 perms 为主，另含 M/C 目录/菜单 perms 供模块级判断），供 hasPerm 使用 */
@@ -19,7 +19,7 @@ export interface AuthState {
 
 // Auth Actions
 interface AuthActions {
-	setUserInfo: (info: IApi.UserInfoResp | null) => void;
+	setUserInfo: (info: IApi.UserItem | null) => void;
 	setAuthData: (partial: Partial<AuthState>) => void;
 	setIsOnline: (status: boolean) => void;
 	resetAuth: () => void;

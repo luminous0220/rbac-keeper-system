@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"rbackeeper/common"
-	"rbackeeper/model"
 )
 
 // UserListQuery 用户列表查询
@@ -61,12 +60,6 @@ type UserItem struct {
 	Roles []*BriefRole `json:"roles"`
 	// 创建时间
 	CreatedAt time.Time `json:"createdAt"`
-}
-
-// UserInfoResp 用户详情（自身信息 + 角色并集菜单）
-type UserInfoResp struct {
-	UserItem
-	Menus []*model.Menu `json:"menus"`
 }
 
 // UserListResp 分页用户列表响应

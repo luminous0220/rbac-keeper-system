@@ -78,46 +78,6 @@ func DeleteMenuByID(db *gorm.DB, menuID uint) error {
 	return db.Delete(&model.Menu{}, menuID).Error
 }
 
-// MenuPermRow ListAllWithPerms 返回所有未逻辑删除菜单（仅 id/perms/roleKey 三列供 Casbin loader 用）
-type MenuPermRow struct {
-	ID       uint
-	Perms    string
-	MenuType string
-}
-
-// ListAllWithPerms 返回所有按钮类型菜单的 id/perms（用于 Casbin p 规则）
-func ListAllWithPerms() ([]MenuPermRow, error) {
-	var rows []MenuPermRow
-	err := global.DB.Model(&model.Menu{}).
-		Select("id, perms, menu_type").
-		Where("perms <> '' AND menu_type = 'F'").
-		Find(&rows).Error
-	return rows, err
-}
-
-// ListRoleMenuPerms 返回 (roleKey, perm) 列表（用于构建 Casbin p 规则）
-func ListRoleMenuPerms() (map[string][]string, error) {
-	type row struct {
-		RoleKey string
-		Perms   string
-	}
-	var rows []row
-	err := global.DB.Table("role_menus rm").
-		Select("r.role_key, m.perms").
-		Joins("JOIN roles r ON r.id = rm.role_id").
-		Joins("JOIN menus m ON m.id = rm.menu_id").
-		Where("m.perms <> '' AND m.menu_type = 'F' AND r.deleted_at IS NULL AND m.deleted_at IS NULL").
-		Scan(&rows).Error
-	if err != nil {
-		return nil, err
-	}
-	out := make(map[string][]string, len(rows))
-	for _, r := range rows {
-		out[r.RoleKey] = append(out[r.RoleKey], r.Perms)
-	}
-	return out, nil
-}
-
 // GetByIDs 按 ID 批量查询菜单（授权校验用，自动过滤逻辑删除）
 func GetByIDs(db *gorm.DB, ids []uint) ([]model.Menu, error) {
 	if len(ids) == 0 {

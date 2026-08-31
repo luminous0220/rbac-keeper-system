@@ -1,5 +1,7 @@
 package auth
 
+import "rbackeeper/model"
+
 // LoginBody 登录请求
 type LoginBody struct {
 	Username     string `json:"username" binding:"required"`
@@ -53,4 +55,12 @@ type ProfileBody struct {
 	Sex *int8 `json:"sex" binding:"omitempty,oneof=0 1 2"`
 	// 头像地址
 	Avatar *string `json:"avatar" binding:"omitempty,max=255"`
+}
+
+// PermissionsResp 当前用户权限（菜单权限列表 + 数据权限部门列表）
+type PermissionsResp struct {
+	// 菜单权限列表（启用角色并集，已剪枝停用菜单及子孙）
+	Menus []*model.Menu `json:"menus"`
+	// 数据权限部门列表（按 dataScope 判断）
+	Depts []model.Dept `json:"depts"`
 }

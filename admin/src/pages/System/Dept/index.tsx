@@ -10,10 +10,10 @@ import { usePerms } from "@/hooks";
 import dayjs from "dayjs";
 
 // 部门状态与用户/角色相反：0=正常 1=停用（model.Dept）
-const STATUS_TEXT: Record<number, string> = { 0: "正常", 1: "停用" };
+const STATUS_TEXT: Record<number, string> = { 1: "正常", 0: "停用" };
 const STATUS_OPTIONS = [
-	{ label: "正常", value: 0 },
-	{ label: "停用", value: 1 },
+	{ label: "正常", value: 1 },
+	{ label: "停用", value: 0 },
 ];
 
 /** 部门树 → antd TreeSelect 数据结构（上级部门选择） */
@@ -30,7 +30,7 @@ function toTreeSelect(nodes: IApi.DeptRaw[]): any[] {
  * - 数据源 /api/dept/tree（原生 model.Dept，snake_case，无分页 → total 置 0 隐藏分页条）
  * - 搜索 deptName/status 透传后端（后端 FilterTreeWithAncestors 返回匹配节点 + 祖先链）
  * - 删除走 /api/dept/delete?id=（后端校验存在子部门或部门下有用户则拦截）
- * - 新增部门默认 status=0（正常）由后端 service 写入，表单不展示
+ * - 新增部门默认 status=1（正常）由后端 service 写入，表单不展示
  */
 const DeptPage: React.FC = () => {
 	const { message } = App.useApp();
@@ -225,7 +225,7 @@ const DeptPage: React.FC = () => {
 			dataIndex: "status",
 			width: 80,
 			render: (value) => (
-				<Tag color={(value as number) === 0 ? "green" : "red"}>
+				<Tag color={(value as number) === 1 ? "green" : "red"}>
 					{STATUS_TEXT[(value as number) ?? 0] ?? "-"}
 				</Tag>
 			),

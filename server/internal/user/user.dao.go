@@ -71,10 +71,10 @@ func GetUserList(ctx *gin.Context, q UserListQuery) ([]model.User, int64, error)
 	return users, total, nil
 }
 
-// GetUserInfoByUsernameScoped 按 username 查询用户（含角色/菜单/数据权限部门/行政部门）。
+// GetUserDetailByUsernameScoped 按 username 查询用户（含角色/菜单/数据权限部门/行政部门）。
 // 目标用户须在当前用户数据权限内；未找到或不在权限内均返回 gorm.ErrRecordNotFound。
 // 不传入ctx，表示不需数据隔离。
-func GetUserInfoByUsernameScoped(ctx *gin.Context, db *gorm.DB, username string) (*model.User, error) {
+func GetUserDetailByUsernameScoped(ctx *gin.Context, db *gorm.DB, username string) (*model.User, error) {
 	var u model.User
 
 	if ctx != nil {
@@ -86,6 +86,7 @@ func GetUserInfoByUsernameScoped(ctx *gin.Context, db *gorm.DB, username string)
 	if err != nil {
 		return nil, err
 	}
+
 	return &u, nil
 }
 
@@ -141,36 +142,4 @@ func ExistsPhone(db *gorm.DB, phone string) (bool, error) {
 		return false, err
 	}
 	return cnt > 0, nil
-}
-
-// ListAllUsernames 返回所有未逻辑删除用户的 username（Casbin g 规则：user -> role）
-func ListAllUsernames() ([]string, error) {
-	var names []string
-	err := global.DB.Model(&model.User{}).
-		Where("deleted_at IS NULL").
-		Pluck("username", &names).Error
-	return names, err
-}
-
-// ListUserRoles 返回 (username, roleKey) 列表（g 规则）
-func ListUserRoles() (map[string][]string, error) {
-	type row struct {
-		Username string
-		RoleKey  string
-	}
-	var rows []row
-	err := global.DB.Table("user_roles ur").
-		Select("u.username, r.role_key").
-		Joins("JOIN users u ON u.id = ur.user_id").
-		Joins("JOIN roles r ON r.id = ur.role_id").
-		Where("u.deleted_at IS NULL AND r.deleted_at IS NULL").
-		Scan(&rows).Error
-	if err != nil {
-		return nil, err
-	}
-	out := make(map[string][]string, len(rows))
-	for _, r := range rows {
-		out[r.Username] = append(out[r.Username], r.RoleKey)
-	}
-	return out, nil
 }

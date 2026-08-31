@@ -16,7 +16,6 @@ import (
 //  4. casbinx.Reload(policies, groupings) 原子切换
 //
 // 数据量按当前规模（10 用户 / 4 角色 / 12 菜单）< 50ms；后续可改造增量 AddPolicy/RemovePolicy。
-//
 // 为避免与业务模块（menu/role/user）形成导入环，Casbin 加载所需的 DB 查询就地实现。
 func ReloadEnforcerPolicies() error {
 	// 1. role 列表（用于 super 通配）
@@ -64,7 +63,7 @@ func ReloadEnforcerPolicies() error {
 func listAllRoleKeys() ([]string, error) {
 	var keys []string
 	err := global.DB.Model(&model.Role{}).
-		Where("deleted_at IS NULL").
+		Where("deleted_at IS NULL AND status = ?", constants.StatusEnabled).
 		Pluck("role_key", &keys).Error
 	return keys, err
 }
@@ -80,7 +79,8 @@ func listRoleMenuPerms() (map[string][]string, error) {
 		Select("r.role_key, m.perms").
 		Joins("JOIN roles r ON r.id = rm.role_id").
 		Joins("JOIN menus m ON m.id = rm.menu_id").
-		Where("m.perms <> '' AND m.menu_type = 'F' AND r.deleted_at IS NULL AND m.deleted_at IS NULL").
+		Where("m.perms <> '' AND m.menu_type = 'F' AND r.deleted_at IS NULL AND m.deleted_at IS NULL AND r.status = ? AND m.status = ?",
+			constants.StatusEnabled, constants.StatusEnabled).
 		Scan(&rows).Error
 	if err != nil {
 		return nil, err
@@ -103,7 +103,8 @@ func listUserRoles() (map[string][]string, error) {
 		Select("u.username, r.role_key").
 		Joins("JOIN users u ON u.id = ur.user_id").
 		Joins("JOIN roles r ON r.id = ur.role_id").
-		Where("u.deleted_at IS NULL AND r.deleted_at IS NULL").
+		Where("u.deleted_at IS NULL AND r.deleted_at IS NULL AND r.status = ?",
+			constants.StatusEnabled).
 		Scan(&rows).Error
 	if err != nil {
 		return nil, err

@@ -170,3 +170,49 @@ func FilterTreeWithAncestors[T any](
 	}
 	return out
 }
+
+// 剔除「不满足 keep 条件」的节点及其全部子孙节点，返回保留节点（保持原顺序）。
+// 语义：若 keep(node)==false，则该节点及沿 parent 链挂在它下面的所有后代一并移除；
+// 即使后代自身 keep==true，只要其祖先链上存在被剪除节点，也会被一并移除。
+// 父节点不在 items 中时，该节点按根节点处理（不因集合外的祖先被裁剪）。
+// 用于树形数据的消费端查询（用户自己的菜单树等）：停用节点应连带其子树一起隐藏，避免漏成孤儿。
+func PruneSubtrees[T any](
+	items []T,
+	getID func(T) uint,
+	getParentID func(T) uint,
+	keep func(T) bool,
+) []T {
+	if len(items) == 0 {
+		return items
+	}
+	// 建立 parentID -> 子节点ID 映射，并从所有「不满足 keep」的节点出发 BFS，标记其全部子孙
+	childrenOf := make(map[uint][]uint, len(items))
+	var badRoots []uint
+	for i := range items {
+		id := getID(items[i])
+		childrenOf[getParentID(items[i])] = append(childrenOf[getParentID(items[i])], id)
+		if !keep(items[i]) {
+			badRoots = append(badRoots, id)
+		}
+	}
+	pruned := make(map[uint]struct{}, len(items))
+	visited := make(map[uint]struct{}, len(items))
+	queue := badRoots
+	for len(queue) > 0 {
+		cur := queue[0]
+		queue = queue[1:]
+		if _, seen := visited[cur]; seen {
+			continue
+		}
+		visited[cur] = struct{}{}
+		pruned[cur] = struct{}{}
+		queue = append(queue, childrenOf[cur]...)
+	}
+	out := make([]T, 0, len(items))
+	for i := range items {
+		if _, bad := pruned[getID(items[i])]; !bad {
+			out = append(out, items[i])
+		}
+	}
+	return out
+}

@@ -112,3 +112,17 @@ func (a *Controller) Profile(ctx *gin.Context) {
 	}
 	response.OK(ctx, resp)
 }
+
+// @Summary 当前用户权限（菜单权限列表 + 数据权限部门列表）
+// @Tags 认证
+// @Security BearerAuth
+// @Success 200 {object} response.Result[PermissionsResp]
+// @Router /auth/permissions [get]
+func (a *Controller) Permissions(ctx *gin.Context) {
+	resp, err := Permissions(ctx)
+	if err != nil {
+		response.FailWithError(ctx, err)
+		return
+	}
+	response.OK(ctx, resp)
+}

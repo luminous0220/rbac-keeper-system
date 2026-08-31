@@ -30,18 +30,6 @@ func List(ctx context.Context, query RoleListQuery) ([]model.Role, error) {
 	return roles, nil
 }
 
-// Detail 角色详情
-func Detail(ctx context.Context, roleKey string) (*model.Role, error) {
-	r, err := GetByKey(roleKey)
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, response.NewBizError(response.ErrNotFound, "角色不存在")
-		}
-		return nil, err
-	}
-	return r, nil
-}
-
 // Add 新增角色
 func Add(ctx context.Context, body RoleAddBody) error {
 	if !utils.IsAlphaNumeric(body.RoleKey) {
@@ -67,6 +55,12 @@ func Add(ctx context.Context, body RoleAddBody) error {
 		}
 		if len(menus) != len(menuIDs) {
 			return response.NewBizError(response.ErrInvalidParam, "包含不存在的菜单ID")
+		}
+		// 停用菜单不可分配
+		for _, m := range menus {
+			if m.Status == constants.StatusDisabled {
+				return response.NewBizError(response.ErrInvalidParam, "包含已停用的菜单")
+			}
 		}
 	}
 
@@ -163,6 +157,18 @@ func Edit(ctx context.Context, roleKey string, body RoleEditBody) error {
 		}
 		if len(menus) != len(menuIDs) {
 			return response.NewBizError(response.ErrInvalidParam, "包含不存在的菜单ID")
+		}
+		// 停用菜单不可分配；已持有的停用菜单放行（仅拦截新增的停用引用）
+		existing := make(map[uint]struct{}, len(r.Menus))
+		for _, m := range r.Menus {
+			existing[m.ID] = struct{}{}
+		}
+		for _, m := range menus {
+			if m.Status == constants.StatusDisabled {
+				if _, ok := existing[m.ID]; !ok {
+					return response.NewBizError(response.ErrInvalidParam, "包含已停用的菜单")
+				}
+			}
 		}
 	}
 

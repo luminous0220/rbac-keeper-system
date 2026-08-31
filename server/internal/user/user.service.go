@@ -30,7 +30,9 @@ func List(ctx *gin.Context, query UserListQuery) (*UserListResp, error) {
 	// 需全量部门列表（不应用数据权限）展开子树，否则子部门被权限裁剪后会漏过滤；
 	// 用户行的可见性仍由 dao 中的 GetUserDataScope 单独约束。
 	if query.DeptID != nil {
-		all, err := dept.GetAllDeptsScoped(nil, nil)
+		// 部门筛选展开子树时排除停用部门（仅启用部门可被筛选）
+		enabled := constants.StatusEnabled
+		all, err := dept.GetAllDeptsScoped(nil, &enabled)
 		if err != nil {
 			return nil, err
 		}
@@ -54,9 +56,9 @@ func List(ctx *gin.Context, query UserListQuery) (*UserListResp, error) {
 		PageSize: query.PageSize}, nil
 }
 
-// Info 用户详情
-func Info(ctx context.Context, username string) (*UserInfoResp, error) {
-	user, err := GetUserInfoByUsernameScoped(nil, global.DB, username)
+// Info 用户详情（仅基本信息）
+func Info(ctx context.Context, username string) (*UserItem, error) {
+	user, err := GetUserDetailByUsernameScoped(nil, global.DB, username)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, response.NewBizError(response.ErrNotFound, "用户不存在")
@@ -64,20 +66,8 @@ func Info(ctx context.Context, username string) (*UserInfoResp, error) {
 		return nil, err
 	}
 
-	// 一个用户有多个角色，每个角色都菜单权限列表可能会有重复的，取并集
 	userItem := toUserItem(user)
-	menus := make([]*model.Menu, 0)
-	for _, v := range user.Roles {
-		menus = append(menus, v.Menus...)
-	}
-	uniqueMenus := utils.UniqueBy(menus, func(m *model.Menu) uint {
-		return m.ID
-	})
-
-	return &UserInfoResp{
-		UserItem: userItem,
-		Menus:    uniqueMenus,
-	}, nil
+	return &userItem, nil
 }
 
 // Add 新增用户（分配的部门须在当前用户数据权限内）
@@ -93,11 +83,19 @@ func Add(ctx *gin.Context, body UserAddBody) error {
 		return response.NewBizError(response.ErrInvalidParam, "用户名已存在")
 	}
 
-	// 部门存在性（须在当前用户数据权限内）
-	if ok, err := dept.ExistsByIDScoped(ctx, global.DB, body.DeptID); err != nil {
+	// 部门存在性 + 启用校验（须在当前用户数据权限内）
+	if body.DeptID == nil {
+		return response.NewBizError(response.ErrInvalidParam, "请选择部门")
+	}
+	d, err := dept.GetByIDScoped(ctx, global.DB, *body.DeptID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return response.NewBizError(response.ErrInvalidParam, "所选部门不存在")
+		}
 		return err
-	} else if !ok {
-		return response.NewBizError(response.ErrInvalidParam, "所选部门不存在")
+	}
+	if d.Status == constants.StatusDisabled {
+		return response.NewBizError(response.ErrInvalidParam, "所选部门已停用")
 	}
 
 	// 密码复杂度 + 哈希
@@ -117,6 +115,13 @@ func Add(ctx *gin.Context, body UserAddBody) error {
 
 	if len(roles) <= 0 {
 		return response.NewBizError(response.ErrInvalidParam, "RoleKeys 中包含不存在的角色key")
+	}
+
+	// 停用角色不可分配
+	for _, r := range roles {
+		if r.Status == constants.StatusDisabled {
+			return response.NewBizError(response.ErrInvalidParam, "包含已停用的角色")
+		}
 	}
 
 	// 组装用户
@@ -152,7 +157,7 @@ func Edit(ctx *gin.Context, username string, body UserEditBody) error {
 		return response.NewBizError(response.ErrNotFound, "禁止修改")
 	}
 
-	user, err := GetUserInfoByUsernameScoped(ctx, global.DB, username)
+	user, err := GetUserDetailByUsernameScoped(ctx, global.DB, username)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return response.NewBizError(response.ErrNotFound, "用户不存在")
@@ -160,11 +165,18 @@ func Edit(ctx *gin.Context, username string, body UserEditBody) error {
 		return err
 	}
 
-	// 部门存在性（须在当前用户数据权限内）
-	if ok, err := dept.ExistsByIDScoped(ctx, global.DB, body.DeptID); err != nil {
-		return err
-	} else if !ok {
-		return response.NewBizError(response.ErrInvalidParam, "所选部门不存在")
+	// 部门存在性 + 启用校验（须在当前用户数据权限内；仅部门变化时校验启用状态）
+	if body.DeptID != nil {
+		d, err := dept.GetByIDScoped(ctx, global.DB, *body.DeptID)
+		if err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return response.NewBizError(response.ErrInvalidParam, "所选部门不存在")
+			}
+			return err
+		}
+		if *body.DeptID != user.DeptID && d.Status == constants.StatusDisabled {
+			return response.NewBizError(response.ErrInvalidParam, "所选部门已停用")
+		}
 	}
 
 	// 组装更新字段（map 写入，避免零值忽略；nil 字段不参与更新）
@@ -196,6 +208,18 @@ func Edit(ctx *gin.Context, username string, body UserEditBody) error {
 		}
 		if len(roles) != len(body.RoleKeys) {
 			return response.NewBizError(response.ErrInvalidParam, "RoleKeys 中包含不存在的角色key")
+		}
+		// 停用角色不可分配；已持有的停用角色放行（仅拦截新增的停用引用）
+		existing := make(map[string]struct{}, len(user.Roles))
+		for _, r := range user.Roles {
+			existing[r.RoleKey] = struct{}{}
+		}
+		for _, r := range roles {
+			if r.Status == constants.StatusDisabled {
+				if _, ok := existing[r.RoleKey]; !ok {
+					return response.NewBizError(response.ErrInvalidParam, "包含已停用的角色")
+				}
+			}
 		}
 	}
 

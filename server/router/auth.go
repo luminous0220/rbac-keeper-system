@@ -28,6 +28,8 @@ func registerAuthRoutes(base *gin.RouterGroup) {
 			authed.POST("/reset", ac.Reset)
 			// 修改个人信息（昵称/手机/邮箱/性别/头像，仅本人）
 			authed.POST("/profile", ac.Profile)
+			// 当前用户权限（菜单权限列表 + 数据权限部门列表，按 dataScope 过滤部门）
+			authed.GET("/permissions", middleware.DataScope(), ac.Permissions)
 		}
 	}
 }

@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 
+	"rbackeeper/constants"
 	"rbackeeper/global"
 	"rbackeeper/model"
 	"rbackeeper/response"
@@ -37,10 +38,15 @@ func Tree(ctx *gin.Context, query DeptTreeQuery) ([]model.Dept, error) {
 // Add 新增部门（父部门须在当前用户数据权限内）
 func Add(ctx *gin.Context, body DeptAddBody) error {
 	if body.ParentID != 0 {
-		if ok, err := ExistsByIDScoped(ctx, global.DB, &body.ParentID); err != nil {
+		p, err := GetByIDScoped(ctx, global.DB, body.ParentID)
+		if err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return response.NewBizError(response.ErrInvalidParam, "父部门不存在")
+			}
 			return err
-		} else if !ok {
-			return response.NewBizError(response.ErrInvalidParam, "父部门不存在")
+		}
+		if p.Status == constants.StatusDisabled {
+			return response.NewBizError(response.ErrInvalidParam, "所选部门已停用")
 		}
 	}
 
@@ -112,10 +118,16 @@ func Edit(ctx *gin.Context, id uint, body DeptEditBody) error {
 		newParent := *body.ParentID
 		if newParent != 0 {
 			// 检查父部门是否存在，且在当前用户数据权限内
-			if ok, err := ExistsByIDScoped(ctx, global.DB, &newParent); err != nil {
+			p, err := GetByIDScoped(ctx, global.DB, newParent)
+			if err != nil {
+				if errors.Is(err, gorm.ErrRecordNotFound) {
+					return response.NewBizError(response.ErrInvalidParam, "父部门不存在")
+				}
 				return err
-			} else if !ok {
-				return response.NewBizError(response.ErrInvalidParam, "父部门不存在")
+			}
+			// 仅父部门变化时校验启用状态（保留原父部门即使停用也不拦）
+			if newParent != d.ParentID && p.Status == constants.StatusDisabled {
+				return response.NewBizError(response.ErrInvalidParam, "")
 			}
 			// 环检测必须用全量部门（不应用数据权限），否则环可能藏在权限范围外的节点里
 			all, err := GetAllDeptsScoped(ctx, nil)

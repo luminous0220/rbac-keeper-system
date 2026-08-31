@@ -103,12 +103,3 @@ func CountUsersByID(db *gorm.DB, roleID uint) (int64, error) {
 	err := db.Table("user_roles").Where("role_id = ?", roleID).Count(&cnt).Error
 	return cnt, err
 }
-
-// ListAllKeys 返回全部未删除角色的 role_key
-func ListAllKeys() ([]string, error) {
-	var keys []string
-	err := global.DB.Model(&model.Role{}).
-		Where("deleted_at IS NULL").
-		Pluck("role_key", &keys).Error
-	return keys, err
-}

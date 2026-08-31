@@ -36,13 +36,13 @@ func DataScope() gin.HandlerFunc {
 		// }
 		// 取用户全部角色
 		// 这里必须全量查询，第一个参数传 nil
-		u, err := user.GetUserInfoByUsernameScoped(nil, global.DB, claims.Username)
-		if err != nil || u == nil {
+		user, err := user.GetUserDetailByUsernameScoped(nil, global.DB, claims.Username)
+		if err != nil || user == nil {
 			setScope(constants.DsSelf, nil, 0, claims.UserID)
 			c.Next()
 			return
 		}
-		scope, depts, deptID, uid := computeScope(u)
+		scope, depts, deptID, uid := computeScope(user)
 		setScope(scope, depts, deptID, uid)
 		c.Next()
 	}

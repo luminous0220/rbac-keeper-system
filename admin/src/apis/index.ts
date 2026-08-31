@@ -86,16 +86,22 @@ export const Api = {
 
 	/** 修改个人信息（昵称/手机/邮箱/性别/头像），返回最新本人信息 */
 	updateProfile: (params: IApi.ProfileReq) =>
-		http.post<IApi.UserInfoResp>({
+		http.post<IApi.UserItem>({
 			url: "/api/auth/profile",
 			params,
 		}),
 
+	/** 当前用户权限：菜单权限列表 + 数据权限部门列表（引导期权限唯一来源） */
+	getPermissions: () =>
+		http.get<IApi.PermissionsResp>({
+			url: "/api/auth/permissions",
+		}),
+
 	// ==================== 用户 ====================
 
-	/** 本人信息 + 角色并集菜单（引导期权限来源） */
+	/** 本人基本信息（不含菜单） */
 	getUserInfo: () =>
-		http.get<IApi.UserInfoResp>({
+		http.get<IApi.UserItem>({
 			url: "/api/user/info",
 		}),
 
@@ -120,13 +126,6 @@ export const Api = {
 		http.get<IApi.RoleItem[]>({
 			url: "/api/role/list",
 			params,
-		}),
-
-	/** 角色详情（按 roleKey，引导期取 dataScope/depts/menus） */
-	getRoleInfo: (roleKey: string) =>
-		http.get<IApi.RoleItem>({
-			url: "/api/role/info",
-			params: { roleKey },
 		}),
 
 	/** 新增角色 */
