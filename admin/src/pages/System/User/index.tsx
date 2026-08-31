@@ -598,7 +598,7 @@ const UserPage: React.FC = () => {
 				ref={formRef}
 				fields={getFormFields()} // 使用动态生成的字段
 				onConfirm={handleFormSubmit} // 使用合并后的提交函数
-				width={600}
+				width={720}
 			/>
 		</>
 	);

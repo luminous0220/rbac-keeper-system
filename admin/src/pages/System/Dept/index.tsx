@@ -323,6 +323,7 @@ const DeptPage: React.FC = () => {
 			/>
 			<ProForm
 				ref={formRef}
+				type="drawer"
 				fields={getFormFields()}
 				onConfirm={handleFormSubmit}
 				width={560}
