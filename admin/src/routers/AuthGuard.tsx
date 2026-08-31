@@ -51,8 +51,8 @@ export const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
 				// 2. 角色标识（多角色）
 				const roleKeys = info.roles?.map((r) => r.role_key) ?? [];
 
-				// 3. 权限并集：以 F 型按钮 perms 为主；M/C 目录/菜单的 perms 也一并纳入，
-				//    供模块级按钮判断使用（seed 中角色管理缺 system:role:edit 按钮，需用 system:role 兜底）
+				// 3. 权限并集：以 F 型功能 perms 为主；M/C 菜单/目录的 perms 也一并纳入，
+				//    供模块级功能判断使用（seed 中角色管理缺 system:role:edit 功能，需用 system:role 兜底）
 				const perms = (perm.menus ?? [])
 					.filter((m) => m.perms)
 					.map((m) => m.perms);

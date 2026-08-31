@@ -34,7 +34,7 @@ const ITEM_PADDING_X = 12;
 
 /**
  * @description 递归收集分组下的菜单项（展平子菜单，深层级通过 depth 缩进）
- * 消费后端 model.Menu（menu_name 为标题，menu_type 为 M/C/F），F 按钮已在上游被过滤
+ * 消费后端 model.Menu（menu_name 为标题，menu_type 为 M/C/F），F 功能已在上游被过滤
  * @param children 子菜单列表
  * @param depth 当前层级
  */
@@ -195,7 +195,7 @@ export const Side = ({
 		const result: SideGroup[] = [];
 		const workbench: SideItem[] = [];
 		for (const top of menus) {
-			// 有子菜单的一级菜单作为分组标题（M 目录），叶子一级菜单归入「工作台」
+			// 有子菜单的一级菜单作为分组标题（C 目录），叶子一级菜单归入「工作台」
 			if (top.children?.length) {
 				result.push({
 					key: String(top.id),

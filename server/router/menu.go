@@ -15,7 +15,7 @@ func registerMenuRoutes(base *gin.RouterGroup) {
 	mg := base.Group("/menu")
 	mg.Use(middleware.JWTAuth(), middleware.RateLimit(50, 100), middleware.CaptureBody())
 	{
-		// 菜单树（目录/菜单/按钮三层结构）
+		// 菜单树（目录/菜单/功能三层结构）
 		mg.GET("/tree", middleware.RBAC("system:menu:list", "*"), mc.Tree)
 		// 新增菜单
 		mg.POST("/add", middleware.Idempotent(10*time.Second), middleware.RBAC("system:menu:add", "*"), mc.Add)

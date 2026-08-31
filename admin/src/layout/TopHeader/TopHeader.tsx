@@ -32,7 +32,7 @@ interface FlatMenuNode {
 	path: string;
 	title: string;
 	icon: string;
-	/** 菜单类型 M目录 C菜单 F按钮 */
+	/** 菜单类型 M菜单 C目录 F功能 */
 	menuType: string;
 	/** 从根到当前节点的面包屑文本，如 "系统管理 > 用户管理" */
 	breadcrumbText: string;
@@ -117,7 +117,7 @@ export const TopHeader = ({ setCollapsed, collapsed }: TopHeaderProps) => {
 				</Space>
 			),
 			onClick:
-				index < trail.length - 1 && item.menuType !== "M"
+				index < trail.length - 1 && item.menuType !== "C"
 					? () => navigate(item.path)
 					: undefined,
 		}));
@@ -135,7 +135,7 @@ export const TopHeader = ({ setCollapsed, collapsed }: TopHeaderProps) => {
 			: flatMenus;
 		return source.slice(0, 16).map((item) => ({
 			value: item.path,
-			disabled: item.menuType === "M",
+			disabled: item.menuType === "C",
 			label: (
 				<div className="flex items-center gap-2 py-0.5">
 					<span>{IconMap[item.icon]}</span>

@@ -7,7 +7,7 @@ type MenuTreeNode struct {
 	ID        uint           `json:"id"`
 	ParentID  uint           `json:"parentId"`
 	MenuName  string         `json:"menuName"`
-	MenuType  string         `json:"menuType"` // M目录 C菜单 F按钮
+	MenuType  string         `json:"menuType"` // M菜单 C目录 F功能
 	OrderNum  int            `json:"orderNum"`
 	Path      string         `json:"path"`
 	Component string         `json:"component"`
@@ -53,7 +53,7 @@ type MenuAddBody struct {
 	ParentID uint `json:"parentId"`
 	// 菜单名称
 	MenuName string `json:"menuName" binding:"required,min=2,max=50"`
-	// 菜单类型（M=目录, C=菜单, F=按钮）
+	// 菜单类型（M=菜单, C=目录, F=功能）
 	MenuType string `json:"menuType" binding:"required,oneof=M C F"`
 	// 显示顺序
 	OrderNum int `json:"orderNum"`
@@ -82,7 +82,7 @@ type MenuEditBody struct {
 	ParentID *uint `json:"parentId"`
 	// 菜单名称
 	MenuName *string `json:"menuName" binding:"omitempty,min=2,max=50"`
-	// 菜单类型（M=目录, C=菜单, F=按钮）
+	// 菜单类型（M=菜单, C=目录, F=功能）
 	MenuType *string `json:"menuType" binding:"omitempty,oneof=M C F"`
 	// 显示顺序
 	OrderNum *int `json:"orderNum"`

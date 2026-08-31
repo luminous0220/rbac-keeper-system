@@ -52,7 +52,7 @@ func ExistsMenuPerms(db *gorm.DB, perms string, excludeID uint) (bool, error) {
 	return cnt > 0, err
 }
 
-// CountMenusByParentID 统计子菜单/按钮数（删除前校验，防孤立节点）
+// CountMenusByParentID 统计子菜单/功能数（删除前校验，防孤立节点）
 func CountMenusByParentID(db *gorm.DB, parentID uint) (int64, error) {
 	var cnt int64
 	err := db.Model(&model.Menu{}).Where("parent_id = ?", parentID).Count(&cnt).Error

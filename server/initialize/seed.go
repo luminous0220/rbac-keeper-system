@@ -27,20 +27,20 @@ type seedUser struct {
 // 返回 10 条模拟部门（1 总公司 + 5 一级部门 + 4 二级部门）。
 func seedDepts() []model.Dept {
 	return []model.Dept{
-		{DeptName: "总公司", ParentID: 0, OrderNum: 1, Leader: "张伟", Phone: "13800000001", Email: "hq@rbackeeper.com", Status: 0},
-		{DeptName: "技术部", ParentID: 1, OrderNum: 1, Leader: "李强", Phone: "13800000002", Email: "tech@rbackeeper.com", Status: 0},
-		{DeptName: "产品部", ParentID: 1, OrderNum: 2, Leader: "王芳", Phone: "13800000003", Email: "product@rbackeeper.com", Status: 0},
-		{DeptName: "市场部", ParentID: 1, OrderNum: 3, Leader: "刘洋", Phone: "13800000004", Email: "market@rbackeeper.com", Status: 0},
-		{DeptName: "财务部", ParentID: 1, OrderNum: 4, Leader: "陈静", Phone: "13800000005", Email: "finance@rbackeeper.com", Status: 0},
-		{DeptName: "人力资源部", ParentID: 1, OrderNum: 5, Leader: "赵敏", Phone: "13800000006", Email: "hr@rbackeeper.com", Status: 0},
-		{DeptName: "研发组", ParentID: 2, OrderNum: 1, Leader: "孙磊", Phone: "13800000007", Email: "rd@rbackeeper.com", Status: 0},
-		{DeptName: "测试组", ParentID: 2, OrderNum: 2, Leader: "周婷", Phone: "13800000008", Email: "qa@rbackeeper.com", Status: 0},
-		{DeptName: "设计组", ParentID: 3, OrderNum: 1, Leader: "吴鹏", Phone: "13800000009", Email: "design@rbackeeper.com", Status: 0},
-		{DeptName: "销售组", ParentID: 4, OrderNum: 1, Leader: "郑琳", Phone: "13800000010", Email: "sales@rbackeeper.com", Status: 0},
+		{DeptName: "总公司", ParentID: 0, OrderNum: 1, Leader: "张伟", Phone: "13800000001", Email: "hq@rbackeeper.com", Status: 1},
+		{DeptName: "技术部", ParentID: 1, OrderNum: 1, Leader: "李强", Phone: "13800000002", Email: "tech@rbackeeper.com", Status: 1},
+		{DeptName: "产品部", ParentID: 1, OrderNum: 2, Leader: "王芳", Phone: "13800000003", Email: "product@rbackeeper.com", Status: 1},
+		{DeptName: "市场部", ParentID: 1, OrderNum: 3, Leader: "刘洋", Phone: "13800000004", Email: "market@rbackeeper.com", Status: 1},
+		{DeptName: "财务部", ParentID: 1, OrderNum: 4, Leader: "陈静", Phone: "13800000005", Email: "finance@rbackeeper.com", Status: 1},
+		{DeptName: "人力资源部", ParentID: 1, OrderNum: 5, Leader: "赵敏", Phone: "13800000006", Email: "hr@rbackeeper.com", Status: 1},
+		{DeptName: "研发组", ParentID: 2, OrderNum: 1, Leader: "孙磊", Phone: "13800000007", Email: "rd@rbackeeper.com", Status: 1},
+		{DeptName: "测试组", ParentID: 2, OrderNum: 2, Leader: "周婷", Phone: "13800000008", Email: "qa@rbackeeper.com", Status: 1},
+		{DeptName: "设计组", ParentID: 3, OrderNum: 1, Leader: "吴鹏", Phone: "13800000009", Email: "design@rbackeeper.com", Status: 1},
+		{DeptName: "销售组", ParentID: 4, OrderNum: 1, Leader: "郑琳", Phone: "13800000010", Email: "sales@rbackeeper.com", Status: 1},
 	}
 }
 
-// 返回 39 条内置菜单（M 目录 / C 菜单 / F 按钮的三层结构）。
+// 返回 41 条内置菜单（M 菜单 / C 目录 / F 功能的三层结构）。
 // 注意：ParentID 依赖 Create 批量插入时自增 ID 从 1 起按切片顺序分配（根节点为 0），与 seedDepts 同款约定。
 func seedMenus() []model.Menu {
 	m := func(name, menuType, perms, path, component, icon string, parent, order int) model.Menu {
@@ -57,10 +57,10 @@ func seedMenus() []model.Menu {
 		}
 	}
 	return []model.Menu{
-		// 系统管理（目录 M）
-		m("系统管理", "M", "system", "system", "", "system", 0, 1),
-		// 用户管理（C 菜单 + F 按钮）
-		m("用户管理", "C", "system:user", "user", "system/user/index", "user", 1, 1),
+		// 系统管理（目录 C）
+		m("系统管理", "C", "", "system", "", "System", 0, 1),
+		// 用户管理（M 菜单 + F 功能）
+		m("用户管理", "M", "", "user", "System/User/index.tsx", "user", 1, 1),
 		m("用户新增", "F", "system:user:add", "", "", "#", 2, 1),
 		m("用户修改", "F", "system:user:edit", "", "", "#", 2, 2),
 		m("用户删除", "F", "system:user:remove", "", "", "#", 2, 3),
@@ -68,41 +68,42 @@ func seedMenus() []model.Menu {
 		m("用户详情", "F", "system:user:query", "", "", "#", 2, 5),
 		m("用户导出", "F", "system:user:export", "", "", "#", 2, 6),
 		m("重置密码", "F", "system:user:reset", "", "", "#", 2, 7),
-		// 角色管理（C 菜单 + F 按钮）
-		m("角色管理", "C", "system:role", "role", "system/role/index", "peoples", 1, 2),
+		// 角色管理（M 菜单 + F 功能）
+		m("角色管理", "M", "", "role", "System/Role/index.tsx", "peoples", 1, 2),
 		m("角色新增", "F", "system:role:add", "", "", "#", 10, 1),
 		m("角色查询", "F", "system:role:list", "", "", "#", 10, 2),
 		m("角色导出", "F", "system:role:export", "", "", "#", 10, 3),
 		m("角色删除", "F", "system:role:remove", "", "", "#", 10, 4),
-		// 菜单管理（C 菜单 + F 按钮）
-		m("菜单管理", "C", "system:menu", "menu", "system/menu/index", "menu", 1, 3),
+		// 菜单管理（M 菜单 + F 功能）
+		m("菜单管理", "M", "", "menu", "System/Menu/index.tsx", "menu", 1, 3),
 		m("菜单查询", "F", "system:menu:list", "", "", "#", 15, 1),
 		m("菜单新增", "F", "system:menu:add", "", "", "#", 15, 2),
 		m("菜单修改", "F", "system:menu:edit", "", "", "#", 15, 3),
 		m("菜单删除", "F", "system:menu:remove", "", "", "#", 15, 4),
-		// 部门管理（C 菜单 + F 按钮）
-		m("部门管理", "C", "system:dept", "dept", "system/dept/index", "tree", 1, 4),
+		// 部门管理（M 菜单 + F 功能）
+		m("部门管理", "M", "", "dept", "System/Dept/index.tsx", "tree", 1, 4),
 		m("部门查询", "F", "system:dept:list", "", "", "#", 20, 1),
 		m("部门新增", "F", "system:dept:add", "", "", "#", 20, 2),
 		m("部门修改", "F", "system:dept:edit", "", "", "#", 20, 3),
 		m("部门删除", "F", "system:dept:remove", "", "", "#", 20, 4),
-		// 字典（阶段七待补业务，先挂 F 按钮权限）
-		m("字典类型查询", "F", "system:dict:type:list", "", "", "#", 1, 5),
-		m("字典类型新增", "F", "system:dict:type:add", "", "", "#", 1, 6),
-		m("字典类型修改", "F", "system:dict:type:edit", "", "", "#", 1, 7),
-		m("字典类型删除", "F", "system:dict:type:delete", "", "", "#", 1, 8),
-		m("字典数据查询", "F", "system:dict:data:list", "", "", "#", 1, 9),
-		m("字典数据按类型", "F", "system:dict:data:type", "", "", "#", 1, 10),
-		m("字典数据新增", "F", "system:dict:data:add", "", "", "#", 1, 11),
-		m("字典数据修改", "F", "system:dict:data:edit", "", "", "#", 1, 12),
-		m("字典数据删除", "F", "system:dict:data:delete", "", "", "#", 1, 13),
-		// 系统监控（目录 M + 日志 C 菜单 / F 按钮）
-		m("系统监控", "M", "monitor", "monitor", "", "monitor", 0, 2),
-		m("登录日志", "C", "monitor:loginlog", "loginlog", "monitor/loginlog/index", "logininfor", 34, 1),
-		m("操作日志", "C", "monitor:oplog", "oplog", "monitor/oplog/index", "form", 34, 2),
-		m("登录日志查询", "F", "monitor:log:login", "", "", "#", 34, 3),
-		m("操作日志查询", "F", "monitor:log:operation", "", "", "#", 34, 4),
-		m("日志导出", "F", "monitor:log:export", "", "", "#", 34, 5),
+		// 字典管理（M 菜单 + F 功能）
+		m("字典管理", "M", "", "dict", "System/Dict/index.tsx", "dict", 1, 5),
+		m("字典类型查询", "F", "system:dict:type:list", "", "", "#", 25, 1),
+		m("字典类型新增", "F", "system:dict:type:add", "", "", "#", 25, 2),
+		m("字典类型修改", "F", "system:dict:type:edit", "", "", "#", 25, 3),
+		m("字典类型删除", "F", "system:dict:type:delete", "", "", "#", 25, 4),
+		m("字典数据查询", "F", "system:dict:data:list", "", "", "#", 25, 5),
+		m("字典数据按类型查询", "F", "system:dict:data:type", "", "", "#", 25, 6),
+		m("字典数据新增", "F", "system:dict:data:add", "", "", "#", 25, 7),
+		m("字典数据修改", "F", "system:dict:data:edit", "", "", "#", 25, 8),
+		m("字典数据删除", "F", "system:dict:data:delete", "", "", "#", 25, 9),
+		// 系统监控（目录 C + 日志 M 菜单 / F 功能）
+		m("系统监控", "C", "", "monitor", "", "monitor", 0, 2),
+		m("登录日志", "M", "", "loginlog", "monitor/Loginlog/index.tsx", "logininfor", 35, 1),
+		m("操作日志", "M", "", "oplog", "monitor/Oplog/index.tsx", "form", 35, 2),
+		m("登录日志查询", "F", "monitor:log:login", "", "", "#", 36, 3),
+		m("操作日志查询", "F", "monitor:log:operation", "", "", "#", 37, 4),
+		m("数据看板", "M", "", "/dash-board", "Dashboard/index.tsx", "", 0, 99),
 	}
 }
 
@@ -193,7 +194,7 @@ func RegisterSeed() {
 			log.Fatal().Err(err).Msg("seed 部门失败")
 		}
 
-		// 2. 菜单（39 条，M 目录 / C 菜单 / F 按钮的三层结构）
+		// 2. 菜单（39 条，M 菜单 / C 目录 / F 功能的三层结构）
 		menus := seedMenus()
 		if err := tx.Create(&menus).Error; err != nil {
 			log.Fatal().Err(err).Msg("seed 菜单失败")

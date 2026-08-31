@@ -169,7 +169,7 @@ export namespace IApi {
 		path: string;
 		component: string;
 		query: string;
-		menu_type: "M" | "C" | "F"; // M目录 C菜单 F按钮
+		menu_type: "M" | "C" | "F"; // M菜单 C目录 F功能
 		status: number;
 		perms: string;
 		icon: string;

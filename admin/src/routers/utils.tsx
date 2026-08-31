@@ -41,7 +41,7 @@ function joinPath(parent: string, child: string): string {
 
 /**
  * 由扁平菜单列表构建菜单树（/user/info 返回扁平 model.Menu，需前端建树）。
- * - 仅保留启用（status===1）且非按钮（menu_type!=='F'）的菜单
+ * - 仅保留启用（status===1）且非功能（menu_type!=='F'）的菜单
  * - 按 parent_id 挂载，同级按 order_num 升序
  * - 逐层拼接 path 为绝对路径，供侧边栏导航与路由匹配
  */
@@ -81,7 +81,7 @@ export const buildMenuTree = (flat: IApi.MenuRaw[]): IApi.MenuRaw[] => {
 	return roots;
 };
 
-// 生成动态路由（C/M 类型且含路径的节点生成路由，F 按钮不生成）
+// 生成动态路由（目录/菜单类型且含路径的节点生成路由，F 功能不生成）
 export const generateRoutes = (menus: IApi.MenuRaw[]): RouteObject[] => {
 	const routes: RouteObject[] = [];
 	menus.forEach((menu) => {

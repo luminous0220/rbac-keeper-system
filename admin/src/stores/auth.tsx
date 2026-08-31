@@ -7,9 +7,9 @@ export interface AuthState {
 	isOnline: boolean;
 	/** 本人基本信息（来自 /api/user/info） */
 	userInfo: IApi.UserItem | null;
-	/** 已构建的菜单树（仅启用、含 F 按钮，用于侧边栏/动态路由/按钮权限） */
+	/** 已构建的菜单树（仅启用、含 F 功能，用于侧边栏/动态路由/功能权限） */
 	menus: IApi.MenuRaw[];
-	/** 权限并集（F 按钮 perms 为主，另含 M/C 目录/菜单 perms 供模块级判断），供 hasPerm 使用 */
+	/** 权限并集（F 功能 perms 为主，另含 M/C 菜单/目录 perms 供模块级判断），供 hasPerm 使用 */
 	perms: string[];
 	/** 角色标识列表（多角色） */
 	roleKeys: string[];

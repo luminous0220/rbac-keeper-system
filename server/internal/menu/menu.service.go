@@ -57,7 +57,7 @@ func Add(ctx context.Context, body MenuAddBody) error {
 		}
 	}
 
-	// perms 校验：按钮(F)必填，目录(M)/菜单(C)可选；非空时校验格式 + 唯一性
+	// perms 校验：功能(F)必填，菜单(M)/目录(C)可选；非空时校验格式 + 唯一性
 	if err := validateMenuPerms(body.MenuType, body.Perms, 0); err != nil {
 		return err
 	}
@@ -194,7 +194,7 @@ func Delete(ctx context.Context, id uint) error {
 		return err
 	}
 	if cnt > 0 {
-		return response.NewBizError(response.ErrForbidden, "存在子菜单或按钮，无法删除")
+		return response.NewBizError(response.ErrForbidden, "存在子菜单或功能，无法删除")
 	}
 	if err := global.DB.Transaction(func(tx *gorm.DB) error {
 		return DeleteMenuByID(tx, id)
@@ -208,13 +208,13 @@ func Delete(ctx context.Context, id uint) error {
 	return nil
 }
 
-// 校验权限标识：按钮(F)必填；非空时校验三段式格式与唯一性
+// 校验权限标识：仅功能(F)使用；菜单(M)/目录(C) 不再填写也不校验。
 func validateMenuPerms(menuType, perms string, excludeID uint) error {
-	if perms == "" {
-		if menuType == "F" {
-			return response.NewBizError(response.ErrInvalidParam, "按钮类型必须填写权限标识")
-		}
+	if menuType != "F" {
 		return nil
+	}
+	if perms == "" {
+		return response.NewBizError(response.ErrInvalidParam, "功能类型必须填写权限标识")
 	}
 	if !permsRe.MatchString(perms) {
 		return response.NewBizError(response.ErrInvalidParam, "权限标识需为 模块:实体:动作 三段式（小写字母/数字/下划线）")

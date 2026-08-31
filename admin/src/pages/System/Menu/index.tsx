@@ -1,10 +1,6 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import { App, Button, Popconfirm, Tag, TreeSelect, Typography } from "antd";
-import {
-	PlusOutlined,
-	EditOutlined,
-	DeleteOutlined,
-} from "@ant-design/icons";
+import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import type { FormInstance } from "antd";
 import { ProTable } from "@/components/ProTable";
 import type { ProTableRef, ProTableColumnType } from "@/components/ProTable";
@@ -16,16 +12,16 @@ import dayjs from "dayjs";
 import IconSelect from "@/components/IconSelect";
 import { IconMap } from "@/libs";
 
-// 菜单类型：M目录 C菜单 F按钮（与 model.Menu.menu_type 一致）
+// 菜单类型：M菜单 C目录 F功能（与 model.Menu.menu_type 一致）
 const MENU_TYPE_OPTIONS = [
-	{ label: "目录", value: "M" },
-	{ label: "菜单", value: "C" },
-	{ label: "按钮", value: "F" },
+	{ label: "菜单", value: "M" },
+	{ label: "目录", value: "C" },
+	{ label: "功能", value: "F" },
 ];
 const MENU_TYPE_TEXT: Record<string, { text: string; color: string }> = {
-	M: { text: "目录", color: "orange" },
-	C: { text: "菜单", color: "blue" },
-	F: { text: "按钮", color: "default" },
+	M: { text: "菜单", color: "blue" },
+	C: { text: "目录", color: "orange" },
+	F: { text: "功能", color: "default" },
 };
 // 菜单状态与 model 一致：1=正常 0=停用（前端 buildMenuTree 以 status===1 过滤）
 const MENU_STATUS_TEXT: Record<number, string> = { 1: "正常", 0: "停用" };
@@ -33,7 +29,7 @@ const MENU_STATUS_OPTIONS = [
 	{ label: "正常", value: 1 },
 	{ label: "停用", value: 0 },
 ];
-// 显示状态：0隐藏 1显示 
+// 显示状态：0隐藏 1显示
 const VISIBLE_TEXT: Record<number, string> = { 1: "显示", 0: "隐藏" };
 const VISIBLE_OPTIONS = [
 	{ label: "显示", value: 1 },
@@ -82,10 +78,10 @@ function filterByType(nodes: IApi.MenuRaw[], types: string[]): IApi.MenuRaw[] {
 
 /**
  * 构建菜单表单字段（新增/编辑共用，编辑时 menuType 置灰不可切换）。
- * - 顶部 menuType 用 Radio(buttonStyle) 模拟「目录/菜单/按钮」三 Tab
- * - 目录(M)/菜单(C) 显示：图标/路由地址/显示状态；菜单(C) 额外显示：组件路径/路由参数
- * - 按钮(F) 仅显示：菜单名称/顺序/权限标识(必填三段式)/状态/备注
- * - 上级菜单按当前类型过滤可选父级（F 可挂 M/C 下，M/C 仅挂 M 目录下）
+ * - 顶部 menuType 用 Radio(buttonStyle) 模拟「菜单/目录/功能」三 Tab
+ * - 菜单(M)/目录(C) 显示：图标/路由地址/显示状态；菜单(M) 额外显示：组件路径/路由参数
+ * - 功能(F) 仅显示：菜单名称/顺序/权限标识(必填三段式)/状态/备注
+ * - 上级菜单按当前类型过滤可选父级（F 可挂 M 下，M/C 仅挂 C 目录下）
  */
 function buildMenuFields(
 	menuTypeDisabled: boolean,
@@ -112,7 +108,7 @@ function buildMenuFields(
 			name: "parentId",
 			// 自定义渲染：树需随 menuType 切换过滤范围，故不走静态 fieldProps
 			render: (value, form) => {
-				const type = (form.getFieldValue("menuType") as string) ?? "M";
+				const type = (form.getFieldValue("menuType") as string) ?? "C";
 				return (
 					<TreeSelect
 						value={(value as number) ?? undefined}
@@ -166,7 +162,7 @@ function buildMenuFields(
 				placeholder: "如 system（目录）或 user（菜单）",
 			},
 			visible: (values) => values.menuType !== "F",
-			// 按钮(F) 下该字段隐藏且无需校验（antd 隐藏字段仍会校验，用 RuleRender 按类型动态判断）
+			// 功能(F) 下该字段隐藏且无需校验（antd 隐藏字段仍会校验，用 RuleRender 按类型动态判断）
 			rules: [
 				menuTypeValidator((form, value) =>
 					form.getFieldValue("menuType") === "F"
@@ -185,10 +181,10 @@ function buildMenuFields(
 				maxLength: 255,
 				placeholder: "如 system/user/index（菜单必填）",
 			},
-			visible: (values) => values.menuType === "C",
+			visible: (values) => values.menuType === "M",
 			rules: [
 				menuTypeValidator((form, value) =>
-					form.getFieldValue("menuType") !== "C"
+					form.getFieldValue("menuType") !== "M"
 						? null
 						: value
 							? null
@@ -201,7 +197,7 @@ function buildMenuFields(
 			label: "路由参数",
 			name: "query",
 			fieldProps: { maxLength: 255, placeholder: "选填" },
-			visible: (values) => values.menuType === "C",
+			visible: (values) => values.menuType === "M",
 		},
 		{
 			type: "input",
@@ -209,14 +205,17 @@ function buildMenuFields(
 			name: "perms",
 			fieldProps: {
 				maxLength: 100,
-				placeholder: "三段式：模块:实体:动作，如 system:user:list（按钮必填）",
+				placeholder: "三段式：模块:实体:动作，如 system:user:list",
 			},
+			// 菜单(M)/目录(C) 不再填写权限标识，仅功能(F) 显示
+			visible: (values) => values.menuType === "F",
 			rules: [
 				menuTypeValidator((form, value) => {
-					const isF = form.getFieldValue("menuType") === "F";
+					// 仅功能(F) 校验；菜单/目录隐藏字段不参与校验
+					if (form.getFieldValue("menuType") !== "F") return null;
 					const v = value ? String(value) : "";
-					if (isF && !v) return "按钮必须填写权限标识";
-					if (v && !PERMS_RE.test(v)) {
+					if (!v) return "功能必须填写权限标识";
+					if (!PERMS_RE.test(v)) {
 						return "权限标识需为 模块:实体:动作 三段式（小写字母/数字/下划线）";
 					}
 					return null;
@@ -253,9 +252,9 @@ function buildMenuFields(
 /**
  * 菜单管理：树形表格 + 新增 / 编辑 / 删除。
  * - 数据源 /api/menu/tree（原生 model.Menu，snake_case，无分页 → total 置 0 隐藏分页条）
- * - 新增表单三 Tab（目录/菜单/按钮）按 menu_type 显隐字段；编辑时 menuType 置灰不可切换
+ * - 新增表单三 Tab（菜单/目录/功能）按 menu_type 显隐字段；编辑时 menuType 置灰不可切换
  * - 写接口 status 语义已与 model 统一为 1=正常 0=停用
- * - 删除走 /api/menu/delete?id=（存在子菜单或按钮时后端拦截）
+ * - 删除走 /api/menu/delete?id=（存在子菜单或功能时后端拦截）
  */
 const MenuPage: React.FC = () => {
 	const { message } = App.useApp();
@@ -270,13 +269,13 @@ const MenuPage: React.FC = () => {
 	// 上级菜单下拉：随表格数据同步刷新
 	const [menuTree, setMenuTree] = useState<IApi.MenuRaw[]>([]);
 
-	// 父级候选树：F 按钮可挂 M/C 下；目录/菜单仅挂 M 目录下（与 seed 结构一致）
+	// 父级候选树：F 功能可挂 M 菜单下；目录/菜单仅挂 C 目录下（与 seed 结构一致）
 	const dirTreeData = useMemo(
-		() => toTreeSelect(filterByType(menuTree, ["M"])),
+		() => toTreeSelect(filterByType(menuTree, ["C"])),
 		[menuTree],
 	);
 	const menuDirTreeData = useMemo(
-		() => toTreeSelect(filterByType(menuTree, ["M", "C"])),
+		() => toTreeSelect(filterByType(menuTree, ["M"])),
 		[menuTree],
 	);
 
@@ -296,26 +295,23 @@ const MenuPage: React.FC = () => {
 		return buildMenuFields(menuTypeDisabled, dirTreeData, menuDirTreeData);
 	}, [formMode.type, dirTreeData, menuDirTreeData]);
 
-	// 打开新增：指定父级时按父类型预选 menuType（M 下默认菜单 C；C 下默认按钮 F）
-	const openAdd = useCallback(
-		(parent?: IApi.MenuRaw) => {
-			setFormMode({ type: "add" });
-			const base: Record<string, any> = { orderNum: 0, status: 1, visible: 0 };
-			if (parent) {
-				base.menuType = parent.menu_type === "M" ? "C" : "F";
-				base.parentId = parent.id;
-			} else {
-				base.menuType = "M";
-			}
-			formRef.current?.open({
-				title: parent
-					? `新增${parent.menu_type === "M" ? "菜单" : "按钮"}`
-					: "新增菜单",
-				initialValues: base,
-			});
-		},
-		[],
-	);
+	// 打开新增：指定父级时按父类型预选 menuType（C 目录下默认菜单 M；M 菜单下默认功能 F）
+	const openAdd = useCallback((parent?: IApi.MenuRaw) => {
+		setFormMode({ type: "add" });
+		const base: Record<string, any> = { orderNum: 0, status: 1, visible: 0 };
+		if (parent) {
+			base.menuType = parent.menu_type === "C" ? "M" : "F";
+			base.parentId = parent.id;
+		} else {
+			base.menuType = "C";
+		}
+		formRef.current?.open({
+			title: parent
+				? `新增${parent.menu_type === "C" ? "菜单" : "功能"}`
+				: "新增菜单",
+			initialValues: base,
+		});
+	}, []);
 
 	// 打开编辑
 	const openEdit = useCallback((record: IApi.MenuRaw) => {
@@ -389,14 +385,13 @@ const MenuPage: React.FC = () => {
 	const columns: ProTableColumnType<IApi.MenuRaw>[] = [
 		{
 			title: "菜单名称",
+			minWidth:240,
 			dataIndex: "menu_name",
 			render: (v, record) => (
 				<div className="flex-center gap-2">
-					{record.icon && (
-						<span className="flex items-center text-base p-2 bg-[#EBF7FF] rounded-lg text-[var(--p)] dark:bg-[#070D10]">
-							{IconMap[record.icon]}
-						</span>
-					)}
+					<span className="size-8 min-w-8 flex-center text-base bg-[#EBF7FF] rounded-lg text-[var(--p)] dark:bg-[#070D10]">
+						{IconMap[record.icon] ?? record.menu_name[0]} 
+					</span>
 					<span>{v}</span>
 				</div>
 			),
@@ -476,7 +471,7 @@ const MenuPage: React.FC = () => {
 							icon={<PlusOutlined />}
 							onClick={() => openAdd(record)}
 						>
-							新增{record.menu_type === "M" ? "菜单" : "按钮"}
+							新增{record.menu_type === "C" ? "菜单" : "功能"}
 						</Button>
 					)}
 					{hasPerm("system:menu:edit") && (
@@ -493,7 +488,7 @@ const MenuPage: React.FC = () => {
 					{hasPerm("system:menu:remove") && (
 						<Popconfirm
 							title="确定删除该菜单吗？"
-							description="存在子菜单或按钮时将被拦截"
+							description="存在子菜单或功能时将被拦截"
 							okText="删除"
 							cancelText="取消"
 							okButtonProps={{ danger: true }}
