@@ -57,11 +57,11 @@ func seedMenus() []model.Menu {
 		}
 	}
 	return []model.Menu{
-		m("数据看板", "M", "", "/dash-board", "Dashboard/index.tsx", "", 0, 10),
+		m("数据看板", "M", "", "/dash-board", "Dashboard/index.tsx", "DashboardOutlined", 0, 10),
 		// 系统管理（目录 C）
-		m("系统管理", "C", "", "system", "", "System", 0, 1),
+		m("系统管理", "C", "", "system", "", "", 0, 1),
 		// 用户管理（M 菜单 + F 功能）
-		m("用户管理", "M", "", "user", "System/User/index.tsx", "user", 2, 1),
+		m("用户管理", "M", "", "user", "System/User/index.tsx", "UserOutlined", 2, 1),
 		m("用户新增", "F", "system:user:add", "", "", "#", 3, 1),
 		m("用户修改", "F", "system:user:edit", "", "", "#", 3, 2),
 		m("用户删除", "F", "system:user:remove", "", "", "#", 3, 3),
@@ -70,25 +70,25 @@ func seedMenus() []model.Menu {
 		m("用户导出", "F", "system:user:export", "", "", "#", 3, 6),
 		m("重置密码", "F", "system:user:reset", "", "", "#", 3, 7),
 		// 角色管理（M 菜单 + F 功能）
-		m("角色管理", "M", "", "role", "System/Role/index.tsx", "peoples", 2, 2),
+		m("角色管理", "M", "", "role", "System/Role/index.tsx", "TeamOutlined", 2, 2),
 		m("角色新增", "F", "system:role:add", "", "", "#", 11, 1),
 		m("角色查询", "F", "system:role:list", "", "", "#", 11, 2),
 		m("角色导出", "F", "system:role:export", "", "", "#", 11, 3),
 		m("角色删除", "F", "system:role:remove", "", "", "#", 11, 4),
 		// 菜单管理（M 菜单 + F 功能）
-		m("菜单管理", "M", "", "menu", "System/Menu/index.tsx", "menu", 2, 3),
+		m("菜单管理", "M", "", "MenuOutlined", "System/Menu/index.tsx", "MenuOutlined", 2, 3),
 		m("菜单查询", "F", "system:menu:list", "", "", "#", 15, 1),
 		m("菜单新增", "F", "system:menu:add", "", "", "#", 15, 2),
 		m("菜单修改", "F", "system:menu:edit", "", "", "#", 15, 3),
 		m("菜单删除", "F", "system:menu:remove", "", "", "#", 15, 4),
 		// 部门管理（M 菜单 + F 功能）
-		m("部门管理", "M", "", "dept", "System/Dept/index.tsx", "tree", 2, 4),
+		m("部门管理", "M", "", "dept", "System/Dept/index.tsx", "ApartmentOutlined", 2, 4),
 		m("部门查询", "F", "system:dept:list", "", "", "#", 21, 1),
 		m("部门新增", "F", "system:dept:add", "", "", "#", 21, 2),
 		m("部门修改", "F", "system:dept:edit", "", "", "#", 21, 3),
 		m("部门删除", "F", "system:dept:remove", "", "", "#", 21, 4),
 		// 字典管理（M 菜单 + F 功能）
-		m("字典管理", "M", "", "dict", "System/Dict/index.tsx", "dict", 2, 5),
+		m("字典管理", "M", "", "ApartmentOutlined", "System/Dict/index.tsx", "ContainerOutlined", 2, 5),
 		m("字典类型查询", "F", "system:dict:type:list", "", "", "#", 26, 1),
 		m("字典类型新增", "F", "system:dict:type:add", "", "", "#", 26, 2),
 		m("字典类型修改", "F", "system:dict:type:edit", "", "", "#", 26, 3),
@@ -99,10 +99,10 @@ func seedMenus() []model.Menu {
 		m("字典数据修改", "F", "system:dict:data:edit", "", "", "#", 26, 8),
 		m("字典数据删除", "F", "system:dict:data:delete", "", "", "#", 26, 9),
 		// 系统监控（目录 C + 日志 M 菜单 / F 功能）
-		m("系统监控", "C", "", "monitor", "", "monitor", 0, 2),
-		m("登录日志", "M", "", "loginlog", "monitor/Loginlog/index.tsx", "logininfor", 36, 1),
+		m("系统监控", "C", "", "monitor", "", "MonitorOutlined", 0, 2),
+		m("登录日志", "M", "", "loginlog", "monitor/Loginlog/index.tsx", "ProfileOutlined", 36, 1),
 		m("登录日志查询", "F", "monitor:log:login", "", "", "#", 37, 3),
-		m("操作日志", "M", "", "oplog", "monitor/Oplog/index.tsx", "form", 36, 2),
+		m("操作日志", "M", "", "oplog", "monitor/Oplog/index.tsx", "FormOutlined", 36, 2),
 		m("操作日志查询", "F", "monitor:log:operation", "", "", "#", 39, 4),
 	}
 }
@@ -164,7 +164,93 @@ func seedUsers(hashed string, depts []model.Dept, roles []model.Role) []seedUser
 	return out
 }
 
-// 初始化内置数据（部门 / 菜单 / 角色 / 用户）。
+// 返回 12 条内置字典类型。
+// 键值语义见 seedDictData，全部与对应模型字段注释保持一致。
+func seedDictTypes() []model.DictType {
+	t := func(name, dictType string) model.DictType {
+		return model.DictType{
+			DictName: name,
+			DictType: dictType,
+			Status:   1, // 1 正常
+		}
+	}
+	return []model.DictType{
+		t("用户性别", "sys_user_sex"),
+		t("系统开关", "sys_normal_disable"),
+		t("显示状态", "sys_show_hide"),
+		t("系统是否", "sys_yes_no"),
+		t("数据权限", "sys_data_scope"),
+		t("菜单类型", "sys_menu_type"),
+		t("操作类别", "sys_oper_type"),
+		t("操作状态", "sys_oper_status"),
+		t("登录状态", "sys_common_status"),
+		t("通知类型", "sys_notice_type"),
+		t("通知状态", "sys_notice_status"),
+		t("任务状态", "sys_job_status"),
+	}
+}
+
+// 返回 12 条内置字典类型对应的字典数据。
+// 键值严格遵循各模型字段注释：性别 0未知1男2女、通用状态 0停用1正常、可见 0隐藏1显示、
+// 数据权限 1-5、菜单类型 M菜单 C目录 F功能、操作类别 0其它1后台2手机端、登录状态 0成功1失败、操作状态 0正常1异常。
+func seedDictData() []model.DictData {
+	d := func(sort int, label, value, dictType, listClass string) model.DictData {
+		return model.DictData{
+			DictSort:  sort,
+			DictLabel: label,
+			DictValue: value,
+			DictType:  dictType,
+			ListClass: listClass,
+			Status:    1, // 1 正常
+		}
+	}
+	return []model.DictData{
+		// 用户性别（model.User.Sex：0 未知 1 男 2 女）
+		d(1, "未知", "0", "sys_user_sex", ""),
+		d(2, "男", "1", "sys_user_sex", ""),
+		d(3, "女", "2", "sys_user_sex", ""),
+		// 系统开关（通用 Status 字段：1 正常 0 停用）
+		d(1, "正常", "1", "sys_normal_disable", "success"),
+		d(2, "停用", "0", "sys_normal_disable", "danger"),
+		// 显示状态（model.Menu.Visible：1 显示 0 隐藏）
+		d(1, "显示", "1", "sys_show_hide", "success"),
+		d(2, "隐藏", "0", "sys_show_hide", "warning"),
+		// 系统是否
+		d(1, "是", "Y", "sys_yes_no", "success"),
+		d(2, "否", "N", "sys_yes_no", "danger"),
+		// 数据权限（constants/data_scope.go：1 全部 2 自定义 3 本部门 4 本部门及以下 5 仅本人）
+		d(1, "全部数据权限", "1", "sys_data_scope", ""),
+		d(2, "自定义数据权限", "2", "sys_data_scope", ""),
+		d(3, "本部门数据权限", "3", "sys_data_scope", ""),
+		d(4, "本部门及以下数据权限", "4", "sys_data_scope", ""),
+		d(5, "仅本人数据权限", "5", "sys_data_scope", ""),
+		// 菜单类型（model.Menu.MenuType：M 菜单 C 目录 F 功能）
+		d(1, "目录", "C", "sys_menu_type", ""),
+		d(2, "菜单", "M", "sys_menu_type", ""),
+		d(3, "功能", "F", "sys_menu_type", ""),
+		// 操作类别（model.OperationLog.OperatorType：0 其它 1 后台用户 2 手机端用户）
+		d(1, "其它", "0", "sys_oper_type", "info"),
+		d(2, "后台用户", "1", "sys_oper_type", "primary"),
+		d(3, "手机端用户", "2", "sys_oper_type", "warning"),
+		// 操作状态（model.OperationLog.Status：0 正常 1 异常）
+		d(1, "正常", "0", "sys_oper_status", "success"),
+		d(2, "异常", "1", "sys_oper_status", "danger"),
+		// 登录状态（model.LoginLog.Status：0 成功 1 失败）
+		d(1, "成功", "0", "sys_common_status", "success"),
+		d(2, "失败", "1", "sys_common_status", "danger"),
+		// 通知类型
+		d(1, "通知", "1", "sys_notice_type", "warning"),
+		d(2, "公告", "2", "sys_notice_type", "success"),
+		// 通知状态
+		d(1, "正常", "0", "sys_notice_status", "success"),
+		d(2, "关闭", "1", "sys_notice_status", "danger"),
+		// 任务状态
+		d(1, "正常", "0", "sys_job_status", "success"),
+		d(2, "暂停", "1", "sys_job_status", "danger"),
+	}
+}
+
+// 初始化内置数据（部门 / 菜单 / 角色 / 用户 / 字典）。
 func RegisterSeed() {
 	if global.DB == nil {
 		log.Fatal().Msg("数据库未初始化")
@@ -234,12 +320,24 @@ func RegisterSeed() {
 			}
 		}
 
+		// 6. 字典类型（12 条）与字典数据（对应键值），供前端下拉 / 标签回显
+		dictTypes := seedDictTypes()
+		if err := tx.Create(&dictTypes).Error; err != nil {
+			log.Fatal().Err(err).Msg("seed 字典类型失败")
+		}
+		dictData := seedDictData()
+		if err := tx.Create(&dictData).Error; err != nil {
+			log.Fatal().Err(err).Msg("seed 字典数据失败")
+		}
+
 		log.Info().
 			Str("module", "seed").
 			Int("depts", len(depts)).
 			Int("menus", len(menus)).
 			Int("roles", len(roles)).
 			Int("users", 10).
+			Int("dictTypes", len(dictTypes)).
+			Int("dictData", len(dictData)).
 			Str("password", seedPassword).
 			Msg("内置数据初始化完成")
 		return nil

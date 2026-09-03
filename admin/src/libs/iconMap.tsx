@@ -54,6 +54,7 @@ import {
 	WechatOutlined,
 	WindowsOutlined,
 	DatabaseFilled,
+	DashboardOutlined,
 } from "@ant-design/icons";
 import {
 	IconAlarm,
@@ -120,17 +121,8 @@ import {
 
 // antd 图标映射表
 export const IconMap: Record<string, React.ReactNode> = {
-	// 后端 seed 菜单图标键（与前端演示图标名一一对应，缺失时渲染为空）
-	system: <SettingOutlined />,
-	user: <UserOutlined />,
-	peoples: <TeamOutlined />,
-	menu: <MenuOutlined />,
-	tree: <ApartmentOutlined />,
-	monitor: <MonitorOutlined />,
-	logininfor: <ProfileOutlined />,
-	form: <FormOutlined />,
-	dict: <BookOutlined />,
-	home: <HomeOutlined />,
+	DashboardOutlined: <DashboardOutlined />,
+	MonitorOutlined: <MonitorOutlined />,
 	ApartmentOutlined: <ApartmentOutlined />,
 	BellOutlined: <BellOutlined />,
 	BookOutlined: <BookOutlined />,
