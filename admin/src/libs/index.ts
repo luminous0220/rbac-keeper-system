@@ -4,6 +4,7 @@ export * from "./storage";
 export * from "./request";
 export * from "./iconMap";
 export * from "./assetUrl";
+export * from "./download";
 
 /**
  * @description 递归函数来遍历树形数组，并将 children 字段长度为 0 的节点的 children 设置为 undefined（或直接删除该字段）

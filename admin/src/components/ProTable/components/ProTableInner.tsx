@@ -56,6 +56,7 @@ export function ProTableInner<T>(
 		index = true,
 		indexWidth = 80,
 		onSelectRows,
+		selectedActions,
 		onPageChange,
 		columns = [],
 		dataSource: externalDataSource,
@@ -478,16 +479,22 @@ export function ProTableInner<T>(
 		handlePaginationChange,
 	]);
 
-	// 行选择配置
+	// 行选择配置（selectedActions 内含批量操作时同样需要开启选择列）
 	const rowSelectionConfig = useMemo(() => {
-		if (!onSelectRows && !exportable) return undefined;
+		if (!onSelectRows && !exportable && !selectedActions) return undefined;
 
 		return {
 			selectedRowKeys,
 			onChange: handleRowSelectionChange,
 			type: "checkbox" as const,
 		};
-	}, [onSelectRows, exportable, selectedRowKeys, handleRowSelectionChange]);
+	}, [
+		onSelectRows,
+		exportable,
+		selectedActions,
+		selectedRowKeys,
+		handleRowSelectionChange,
+	]);
 
 	// 虚拟列表内容宽度：渲染列宽之和 + 选择列/展开列宽度（虚拟表格要求数值型 scroll.x，
 	// 字符串会被 VirtualTable 强转成 1 导致表格被截断）
@@ -635,11 +642,15 @@ export function ProTableInner<T>(
 					selectedCount={selectedRows.length}
 				/>
 
-				{/* 选中信息 */}
-				{onSelectRows && (
+				{/* 选中信息：批量操作按钮随实时选中渲染，未选中（count 为 0）时整条隐藏 */}
+				{(onSelectRows || selectedActions) && (
 					<SelectedInfo
 						selectedCount={selectedRowKeys.length}
 						onClear={handleClearSelection}
+						actions={selectedActions?.({
+							selectedRows,
+							selectedCount: selectedRows.length,
+						})}
 					/>
 				)}
 

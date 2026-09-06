@@ -53,56 +53,46 @@ func OperationLogList(query OperationLogListQuery) (*OperationLogListResp, error
 	}, nil
 }
 
-// Export 导出登录/操作日志为 CSV；返回字节流与建议文件名。
-// 默认导出近 7 天；超过 10 万行时强制截断（防 OOM）。
-func Export(typ string) ([]byte, string, error) {
-	now := time.Now()
-	start := now.AddDate(0, 0, -7)
-	switch typ {
-	case "login":
-		rows, err := StreamLoginLogs(start, now)
-		if err != nil {
-			return nil, "", err
-		}
-		buf := &bytes.Buffer{}
-		w := csv.NewWriter(buf)
-		_ = w.Write([]string{"ID", "用户名", "IP", "归属", "浏览器", "系统", "状态", "消息", "登录时间"})
-		for i := range rows {
-			if i >= 100000 {
-				break
-			}
-			r := &rows[i]
-			_ = w.Write([]string{
-				fmt.Sprintf("%d", r.ID), r.Username, r.IP, r.IPAddr, r.Browser, r.OS,
-				statusText(r.Status), r.Msg, r.LoginTime.Format("2006-01-02 15:04:05"),
-			})
-		}
-		w.Flush()
-		return buf.Bytes(), "login_logs.csv", nil
-	case "operation":
-		rows, err := StreamOperationLogs(start, now)
-		if err != nil {
-			return nil, "", err
-		}
-		buf := &bytes.Buffer{}
-		w := csv.NewWriter(buf)
-		_ = w.Write([]string{"ID", "模块", "方法", "操作人", "URL", "IP", "状态", "错误", "操作时间"})
-		for i := range rows {
-			if i >= 100000 {
-				break
-			}
-			r := &rows[i]
-			_ = w.Write([]string{
-				fmt.Sprintf("%d", r.ID), r.Title, r.RequestMethod,
-				r.OperName, r.OperURL, r.OperIP,
-				statusText(r.Status), r.ErrorMsg, r.OperTime.Format("2006-01-02 15:04:05"),
-			})
-		}
-		w.Flush()
-		return buf.Bytes(), "operation_logs.csv", nil
-	default:
-		return nil, "", fmt.Errorf("unknown log type: %s", typ)
+// ExportLoginLogs 按筛选导出登录日志 CSV；返回字节流与建议文件名。
+// 行数上限由 dao.logExportLimit 约束（防 OOM）。
+func ExportLoginLogs(q LoginLogExportQuery) ([]byte, string, error) {
+	rows, err := LoginLogExportRows(q)
+	if err != nil {
+		return nil, "", err
 	}
+	buf := &bytes.Buffer{}
+	w := csv.NewWriter(buf)
+	_ = w.Write([]string{"ID", "用户名", "IP", "归属", "浏览器", "系统", "状态", "消息", "登录时间"})
+	for i := range rows {
+		r := &rows[i]
+		_ = w.Write([]string{
+			fmt.Sprintf("%d", r.ID), r.Username, r.IP, r.IPAddr, r.Browser, r.OS,
+			statusText(r.Status), r.Msg, r.LoginTime.Format("2006-01-02 15:04:05"),
+		})
+	}
+	w.Flush()
+	return buf.Bytes(), "login_logs.csv", nil
+}
+
+// ExportOperationLogs 按筛选导出操作日志 CSV；返回字节流与建议文件名。
+func ExportOperationLogs(q OperationLogExportQuery) ([]byte, string, error) {
+	rows, err := OperationLogExportRows(q)
+	if err != nil {
+		return nil, "", err
+	}
+	buf := &bytes.Buffer{}
+	w := csv.NewWriter(buf)
+	_ = w.Write([]string{"ID", "模块", "方法", "操作人", "URL", "IP", "状态", "错误", "操作时间"})
+	for i := range rows {
+		r := &rows[i]
+		_ = w.Write([]string{
+			fmt.Sprintf("%d", r.ID), r.Title, r.RequestMethod,
+			r.OperName, r.OperURL, r.OperIP,
+			statusText(r.Status), r.ErrorMsg, r.OperTime.Format("2006-01-02 15:04:05"),
+		})
+	}
+	w.Flush()
+	return buf.Bytes(), "operation_logs.csv", nil
 }
 
 func toLoginLogItem(r *model.LoginLog) LoginLogItem {
@@ -140,9 +130,15 @@ func statusText(s int8) string {
 	return "失败"
 }
 
-// CreateWithMq 异步入队一条操作日志。失败仅 Warn，不阻断业务。
-// 用法：controller 业务成功 return 前调一次；越权 403 时也调用（status=1）。
+// CreateWithMq 异步入队一条“成功”操作日志（status=0）。
+// 用法：controller 业务成功 return 前调一次。
 func CreateWithMq(c *gin.Context, title string) {
+	CreateWithMqResult(c, title, 0, "")
+}
+
+// CreateWithMqResult 异步入队一条操作日志，可指定状态与错误消息。
+// 失败仅 Warn，不阻断业务。越权 403 时以 status=1 调用，记录异常态。
+func CreateWithMqResult(c *gin.Context, title string, status int8, errorMsg string) {
 	// 生产者未初始化（如未配置 RocketMQ 直接启动）时静默跳过，不阻断业务
 	if global.RocketMQ == nil || global.CFG == nil {
 		return
@@ -159,7 +155,8 @@ func CreateWithMq(c *gin.Context, title string) {
 		OperURL:       c.Request.URL.Path,
 		OperIP:        c.ClientIP(),
 		OperParam:     maskedRequestParam(c),
-		Status:        0,
+		Status:        status,
+		ErrorMsg:      errorMsg,
 		OperTime:      time.Now(),
 	}
 	body, err := json.Marshal(p)

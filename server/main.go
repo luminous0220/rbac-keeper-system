@@ -46,6 +46,8 @@ func main() {
 	initialize.RegisterMigrate()
 	// 内置数据初始化（失败仅告警不阻断启动）
 	initialize.RegisterSeed()
+	// 日志菜单幂等校正：修正老库 component 大小写、补齐导出/清空 F 权限并挂到 super（每次启动运行）
+	initialize.ReconcileLogMenus()
 
 	// 策略引擎初始化 + 首次全量加载（依赖 seed 后的 role_menus / user_roles）
 	casbinx.Init()

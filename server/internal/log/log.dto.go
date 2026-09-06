@@ -86,10 +86,32 @@ type OperationLogItem struct {
 	OperTime time.Time `json:"operTime"`
 }
 
-// LogExportQuery 导出查询
-type LogExportQuery struct {
-	// 导出类型（login 登录日志 / operation 操作日志）
-	Type string `form:"type" binding:"required,oneof=login operation"`
+// LoginLogExportQuery 登录日志导出筛选（与列表字段一致；不含分页，避免必填校验）
+type LoginLogExportQuery struct {
+	// 用户名，模糊匹配
+	Username string `form:"username"`
+	// 登录 IP，精确匹配
+	IP string `form:"ip"`
+	// 登录状态（0 成功 / 1 失败）
+	Status *int8 `form:"status" binding:"omitempty,oneof=0 1"`
+	// 查询起始时间
+	StartTime time.Time `form:"startTime" time_format:"2006-01-02 15:04:05"`
+	// 查询结束时间
+	EndTime time.Time `form:"endTime" time_format:"2006-01-02 15:04:05"`
+}
+
+// OperationLogExportQuery 操作日志导出筛选（与列表字段一致；不含分页）
+type OperationLogExportQuery struct {
+	// 模块标题，模糊匹配
+	Title string `form:"title"`
+	// 操作人员，模糊匹配
+	OperName string `form:"operName"`
+	// 操作状态（0 正常 / 1 异常）
+	Status *int8 `form:"status" binding:"omitempty,oneof=0 1"`
+	// 查询起始时间
+	StartTime time.Time `form:"startTime" time_format:"2006-01-02 15:04:05"`
+	// 查询结束时间
+	EndTime time.Time `form:"endTime" time_format:"2006-01-02 15:04:05"`
 }
 
 // OperationLogPayload 操作日志队列 payload（消费者侧反序列化用）

@@ -1,6 +1,8 @@
 package middleware
 
 import (
+	"fmt"
+
 	"github.com/gin-gonic/gin"
 
 	logmod "rbackeeper/internal/log"
@@ -33,8 +35,8 @@ func RBAC(obj, act string) gin.HandlerFunc {
 			return
 		}
 		if !ok {
-			// 异步记录越权日志（不阻塞业务响应）
-			logmod.CreateWithMq(c, "权限拒绝")
+			// 异步记录越权日志（status=1 异常，不阻塞业务响应）
+			logmod.CreateWithMqResult(c, "权限拒绝", 1, fmt.Sprintf("无权限访问（%s:%s）", obj, act))
 			response.Fail(c, response.ErrForbidden, "无权限访问")
 			c.Abort()
 			return

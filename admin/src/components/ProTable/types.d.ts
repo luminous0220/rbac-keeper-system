@@ -75,6 +75,14 @@ export interface ProTableProps<T>
 		indexWidth?: number;
 		/** 行选择回调，存在时开启选择功能 */
 		onSelectRows?: (selectedRows: T[]) => void;
+		/** 选中信息栏（已选择 N 条）内自定义操作区渲染函数，如批量删除按钮。
+		 *  以函数方式注入，组件内部用「实时选中行/个数」调用，按钮上的数量随选择联动更新，
+		 *  因此无需外部状态即可感知选中变化（弹窗等 props 冻结场景同样生效）。
+		 */
+		selectedActions?: (params: {
+			selectedRows: T[];
+			selectedCount: number;
+		}) => ReactNode;
 		/** 分页变化回调 */
 		onPageChange?: (pagination: ProTablePagination) => void;
 		/** 列配置 */

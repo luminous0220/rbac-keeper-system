@@ -248,6 +248,28 @@ export const Api = {
 
 	/** 操作日志分页列表 */
 	getOperationLogList: pageApi<IApi.OperationLogItem>("/api/log/operation"),
+
+	/** 登录日志导出（CSV，携带与列表一致的筛选参数，返回 Blob） */
+	exportLoginLogs: (params: Record<string, unknown>) =>
+		http.get<Blob>({
+			url: "/api/log/login/export",
+			params,
+			config: { responseType: "blob" },
+		}),
+
+	/** 操作日志导出（CSV，携带与列表一致的筛选参数，返回 Blob） */
+	exportOperationLogs: (params: Record<string, unknown>) =>
+		http.get<Blob>({
+			url: "/api/log/operation/export",
+			params,
+			config: { responseType: "blob" },
+		}),
+
+	/** 清空登录日志 */
+	clearLoginLogs: () => http.post<void>({ url: "/api/log/login/clear" }),
+
+	/** 清空操作日志 */
+	clearOperationLogs: () => http.post<void>({ url: "/api/log/operation/clear" }),
 };
 
 export * from "./type.d";

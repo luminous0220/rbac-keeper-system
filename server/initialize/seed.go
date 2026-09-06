@@ -88,7 +88,7 @@ func seedMenus() []model.Menu {
 		m("部门修改", "F", "system:dept:edit", "", "", "#", 21, 3),
 		m("部门删除", "F", "system:dept:remove", "", "", "#", 21, 4),
 		// 字典管理（M 菜单 + F 功能）
-		m("字典管理", "M", "", "ApartmentOutlined", "System/Dict/index.tsx", "ContainerOutlined", 2, 5),
+		m("字典管理", "M", "", "dict", "System/Dict/index.tsx", "ContainerOutlined", 2, 5),
 		m("字典类型查询", "F", "system:dict:type:list", "", "", "#", 26, 1),
 		m("字典类型新增", "F", "system:dict:type:add", "", "", "#", 26, 2),
 		m("字典类型修改", "F", "system:dict:type:edit", "", "", "#", 26, 3),
@@ -100,10 +100,15 @@ func seedMenus() []model.Menu {
 		m("字典数据删除", "F", "system:dict:data:delete", "", "", "#", 26, 9),
 		// 系统监控（目录 C + 日志 M 菜单 / F 功能）
 		m("系统监控", "C", "", "monitor", "", "MonitorOutlined", 0, 2),
-		m("登录日志", "M", "", "loginlog", "monitor/Loginlog/index.tsx", "ProfileOutlined", 36, 1),
+		m("登录日志", "M", "", "loginlog", "Monitor/LoginLog/index.tsx", "ProfileOutlined", 36, 1),
 		m("登录日志查询", "F", "monitor:log:login", "", "", "#", 37, 3),
-		m("操作日志", "M", "", "oplog", "monitor/Oplog/index.tsx", "FormOutlined", 36, 2),
+		m("操作日志", "M", "", "oplog", "Monitor/OperationLog/index.tsx", "FormOutlined", 36, 2),
 		m("操作日志查询", "F", "monitor:log:operation", "", "", "#", 39, 4),
+		// 日志导出/清空（WS 追加：父级沿用上方 37=登录日志、39=操作日志，仅可末尾追加、勿中插）
+		m("登录日志导出", "F", "monitor:log:login:export", "", "", "#", 37, 5),
+		m("登录日志清空", "F", "monitor:log:login:clear", "", "", "#", 37, 6),
+		m("操作日志导出", "F", "monitor:log:operation:export", "", "", "#", 39, 7),
+		m("操作日志清空", "F", "monitor:log:operation:clear", "", "", "#", 39, 8),
 	}
 }
 

@@ -1,8 +1,11 @@
-import { useCallback } from "react";
-import { Tag, Typography } from "antd";
+import { useCallback, useRef } from "react";
+import { App, Button, Tag, Typography } from "antd";
+import { DownloadOutlined, DeleteOutlined } from "@ant-design/icons";
 import { ProTable } from "@/components/ProTable";
-import type { ProTableColumnType } from "@/components/ProTable";
+import type { ProTableColumnType, ProTableRef } from "@/components/ProTable";
 import { Api, IApi } from "@/apis";
+import { usePerms } from "@/hooks";
+import { downloadBlob } from "@/libs";
 import { toDateTime } from "@/libs/date";
 import dayjs from "dayjs";
 
@@ -14,23 +17,64 @@ const STATUS_OPTIONS = [
 ];
 
 /**
- * 登录日志：只读分页查询。
- * - 数据源 GET /api/log/login
+ * 登录日志：只读分页查询 + 导出 / 清空。
+ * - 数据源 GET /api/log/login（RBAC monitor:log:login）
  * - 搜索 username（模糊）/ip（精确）/status/startTime/endTime
+ * - 导出 GET /api/log/login/export（monitor:log:login:export，携带当前筛选）
+ * - 清空 POST /api/log/login/clear（monitor:log:login:clear，物理删除全部）
  * - Dayjs 时间值在 api 包装层统一转 YYYY-MM-DD HH:mm:ss
  */
 const LoginLogPage: React.FC = () => {
+	const { message, modal } = App.useApp();
+	const { hasPerm } = usePerms();
+	const tableRef = useRef<ProTableRef<IApi.LoginLogItem>>(null);
+	// 最近一次已查询的筛选参数（导出复用：导出的即当前表格所查）
+	const lastQueryRef = useRef<Record<string, unknown>>({});
+
 	const loginLogApi = useCallback(async (params: Record<string, unknown>) => {
-		return Api.getLoginLogList({
-			pageNumber: params.pageNumber as number,
-			pageSize: params.pageSize as number,
+		const query: Record<string, unknown> = {
 			username: params.username ? String(params.username) : undefined,
 			ip: params.ip ? String(params.ip) : undefined,
 			status: params.status as number | undefined,
 			startTime: toDateTime(params.startTime),
 			endTime: toDateTime(params.endTime),
+		};
+		lastQueryRef.current = query;
+		return Api.getLoginLogList({
+			pageNumber: params.pageNumber as number,
+			pageSize: params.pageSize as number,
+			...query,
 		});
 	}, []);
+
+	// 导出当前筛选结果（错误提示由请求层统一弹出，无需在此重复）
+	const handleExport = async () => {
+		try {
+			const blob = await Api.exportLoginLogs({ ...lastQueryRef.current });
+			downloadBlob(blob, "login_logs.csv");
+			message.success("导出成功");
+		} catch {
+			/* noop */
+		}
+	};
+
+	const confirmClear = () => {
+		modal.confirm({
+			title: "清空登录日志",
+			content: "确定清空全部登录日志吗？该操作不可恢复。",
+			okText: "清空",
+			okButtonProps: { danger: true },
+			onOk: async () => {
+				try {
+					await Api.clearLoginLogs();
+					message.success("登录日志已清空");
+					tableRef.current?.refresh();
+				} catch {
+					/* noop */
+				}
+			},
+		});
+	};
 
 	const columns: ProTableColumnType<IApi.LoginLogItem>[] = [
 		{ title: "用户名", dataIndex: "username", width: 130 },
@@ -90,10 +134,25 @@ const LoginLogPage: React.FC = () => {
 
 	return (
 		<ProTable<IApi.LoginLogItem>
+			ref={tableRef}
 			rowKey="id"
 			api={loginLogApi}
 			columns={columns}
 			title="登录日志"
+			toolbarExtra={
+				<>
+					{hasPerm("monitor:log:login:export") && (
+						<Button icon={<DownloadOutlined />} onClick={handleExport}>
+							导出
+						</Button>
+					)}
+					{hasPerm("monitor:log:login:clear") && (
+						<Button danger icon={<DeleteOutlined />} onClick={confirmClear}>
+							清空
+						</Button>
+					)}
+				</>
+			}
 			search={{
 				fields: [
 					{ type: "input", label: "用户名", name: "username" },

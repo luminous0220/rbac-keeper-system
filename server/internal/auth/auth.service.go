@@ -99,11 +99,14 @@ func verifyCaptcha(id, answer string) bool {
 func Login(ctx context.Context, body LoginBody, ip, ua string) (*LoginResp, error) {
 	// 校验验证码（一次性）
 	if !verifyCaptcha(body.CaptchaID, body.CaptchaValue) {
+		// 验证码失败也记一条登录日志，便于追溯异常尝试（不累加 Redis 失败计数）
+		writeLoginLog(body.Username, ip, ua, false, "验证码错误或已失效")
 		return nil, response.NewBizError(response.ErrInvalidParam, "验证码错误或已失效")
 	}
 
 	// 账号锁定检查
 	if locked, _ := global.Redis.Exists(ctx, lockKeyPrefix+body.Username).Result(); locked > 0 {
+		writeLoginLog(body.Username, ip, ua, false, "账号已锁定，请 15 分钟后再试")
 		return nil, response.NewBizError(response.ErrForbidden, "账号已锁定，请 15 分钟后再试")
 	}
 
@@ -116,6 +119,7 @@ func Login(ctx context.Context, body LoginBody, ip, ua string) (*LoginResp, erro
 
 	// 账号状态
 	if u.Status != 1 {
+		writeLoginLog(body.Username, ip, ua, false, "账号已禁用")
 		return nil, response.NewBizError(response.ErrForbidden, "账号已禁用")
 	}
 

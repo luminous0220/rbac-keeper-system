@@ -117,15 +117,33 @@ class RequestHttp {
 		// 响应拦截器
 		this.requestServer.interceptors.response.use(
 			async (interRes: AxiosResponse) => {
-				// 后端统一响应：{ code, msg, data }，code === 0 为成功（server/response/response.go）
-				const { code, msg, data } = interRes.data || {};
 				const config = interRes.config as IConfig;
 
-				// blob 下载：业务码 0 才返回二进制
-				if (interRes.config.responseType === "blob") {
-					if (code !== BUSINESS_CODE.SUCCESS) return Promise.reject(data);
-					return data;
+				// blob 下载（如日志 CSV 导出）：
+				// 成功时后端返回真文件字节（text/csv…），直接给调用方 Blob；
+				// 出错时后端仍以 HTTP 200 + JSON {code,msg,data} 信封返回，axios 在 responseType=blob 下会把它
+				// 变成“装着 JSON 的 Blob”，此处解析还原成信封，交给下方统一错误/401 续期逻辑处理。
+				if (interRes.config.responseType === "blob" && interRes.data instanceof Blob) {
+					const blob = interRes.data as Blob;
+					const looksJson =
+						blob.type.includes("application/json") || blob.type.includes("text/plain");
+					if (looksJson) {
+						try {
+							const parsed = JSON.parse(await blob.text());
+							if (parsed && typeof parsed.code === "number") {
+								interRes.data = parsed; // 还原信封，走统一逻辑
+							}
+						} catch {
+							// 非 JSON 文本（带 BOM 的 CSV 等）→ 视为文件，保持 Blob
+						}
+					}
+					if (interRes.data instanceof Blob) {
+						return interRes.data; // 真文件直接给调用方
+					}
 				}
+
+				// 后端统一响应：{ code, msg, data }，code === 0 为成功（server/response/response.go）
+				const { code, msg, data } = interRes.data || {};
 
 				// 成功：解包 data
 				if (code === BUSINESS_CODE.SUCCESS) return data;

@@ -46,8 +46,6 @@ const DictPage: React.FC = () => {
 		type: "add" | "edit";
 		record?: IApi.DictTypeItem;
 	}>({ type: "add" });
-	// 主表选中行（批量删除用）
-	const [selectedTypes, setSelectedTypes] = useState<IApi.DictTypeItem[]>([]);
 
 	// ==================== 字典数据（弹窗） ====================
 	const dataModalRef = useRef<TableModalViewRef<IApi.DictDataItem>>(null);
@@ -56,8 +54,6 @@ const DictPage: React.FC = () => {
 		type: "add" | "edit";
 		record?: IApi.DictDataItem;
 	}>({ type: "add" });
-	// 弹窗内选中行：toolbarExtra 在 open 时被冻结，用 ref 在点击时读取当前选中
-	const selectedDataRef = useRef<IApi.DictDataItem[]>([]);
 
 	// ---------- 字典类型：表单 ----------
 	const getTypeFormFields = useCallback((): ProFormFields => {
@@ -279,51 +275,53 @@ const DictPage: React.FC = () => {
 		[message],
 	);
 
-	// 弹窗内选中变化：写入 ref，供批量删除按钮点击时读取当前选中
-	const handleSelectData = useCallback((rows: IApi.DictDataItem[]) => {
-		selectedDataRef.current = rows;
-	}, []);
+	// 批量删除字典数据：rows 由 selectedActions 实时传入（无需父组件登记选中）
+	const handleBatchDeleteData = useCallback(
+		(rows: IApi.DictDataItem[]) => {
+			if (!rows.length) {
+				message.warning("请先选择要删除的字典数据");
+				return;
+			}
+			modal.confirm({
+				title: "批量删除字典数据",
+				content: `确定删除选中的 ${rows.length} 个字典数据吗？`,
+				okText: "删除",
+				cancelText: "取消",
+				okButtonProps: { danger: true },
+				onOk: async () => {
+					await Api.deleteDictDatas(rows.map((r) => r.id));
+					message.success("批量删除字典数据成功");
+					dataModalRef.current?.clearSelected();
+					dataModalRef.current?.refresh();
+				},
+			});
+		},
+		[modal, message],
+	);
 
-	const handleBatchDeleteData = useCallback(() => {
-		const rows = selectedDataRef.current;
-		if (!rows.length) {
-			message.warning("请先选择要删除的字典数据");
-			return;
-		}
-		modal.confirm({
-			title: "批量删除字典数据",
-			content: `确定删除选中的 ${rows.length} 个字典数据吗？`,
-			okText: "删除",
-			cancelText: "取消",
-			okButtonProps: { danger: true },
-			onOk: async () => {
-				await Api.deleteDictDatas(rows.map((r) => r.id));
-				message.success("批量删除字典数据成功");
-				dataModalRef.current?.clearSelected();
-				dataModalRef.current?.refresh();
-			},
-		});
-	}, [modal, message]);
-
-	const handleBatchDeleteTypes = useCallback(() => {
-		if (!selectedTypes.length) {
-			message.warning("请先选择要删除的字典类型");
-			return;
-		}
-		modal.confirm({
-			title: "批量删除字典类型",
-			content: `确定删除选中的 ${selectedTypes.length} 个字典类型吗？将级联删除这些类型下的全部字典数据。`,
-			okText: "删除",
-			cancelText: "取消",
-			okButtonProps: { danger: true },
-			onOk: async () => {
-				await Api.deleteDictTypes(selectedTypes.map((t) => t.id));
-				message.success("批量删除字典类型成功");
-				typeTableRef.current?.clearSelected();
-				typeTableRef.current?.refresh();
-			},
-		});
-	}, [selectedTypes, modal, message]);
+	// 批量删除字典类型：rows 由 selectedActions 实时传入（无需父组件登记选中）
+	const handleBatchDeleteTypes = useCallback(
+		(rows: IApi.DictTypeItem[]) => {
+			if (!rows.length) {
+				message.warning("请先选择要删除的字典类型");
+				return;
+			}
+			modal.confirm({
+				title: "批量删除字典类型",
+				content: `确定删除选中的 ${rows.length} 个字典类型吗？将级联删除这些类型下的全部字典数据。`,
+				okText: "删除",
+				cancelText: "取消",
+				okButtonProps: { danger: true },
+				onOk: async () => {
+					await Api.deleteDictTypes(rows.map((t) => t.id));
+					message.success("批量删除字典类型成功");
+					typeTableRef.current?.clearSelected();
+					typeTableRef.current?.refresh();
+				},
+			});
+		},
+		[modal, message],
+	);
 
 	// ---------- 字典数据：弹窗表格列 ----------
 	const dataColumns = useMemo<ProTableColumnType<IApi.DictDataItem>[]>(
@@ -413,11 +411,9 @@ const DictPage: React.FC = () => {
 		[hasPerm, openDataEdit, handleDataDelete],
 	);
 
-	// 打开某类型的数据弹窗：api/toolbarExtra 按当前记录闭包生成，数据变更后走 ref.refresh
+	// 打开某类型的数据弹窗：api/toolbarExtra/selectedActions 按当前记录闭包生成，数据变更后走 ref.refresh
 	const openData = useCallback(
 		(record: IApi.DictTypeItem) => {
-			// 重置选中，避免上次弹窗的选中残留
-			selectedDataRef.current = [];
 			dataModalRef.current?.open({
 				title: `字典数据：${record.dict_name}`,
 				columns: dataColumns,
@@ -431,25 +427,26 @@ const DictPage: React.FC = () => {
 							: undefined,
 						status: params.status as number | undefined,
 					}),
-				onSelectRows: handleSelectData,
-				toolbarExtra: (
-					<>
-						{hasPerm("system:dict:data:add") && (
-							<Button
-								type="primary"
-								icon={<PlusOutlined />}
-								onClick={() => openDataAdd(record)}
-							>
-								新增数据
-							</Button>
-						)}
-						{hasPerm("system:dict:data:delete") && (
-							<Button danger onClick={handleBatchDeleteData}>
-								批量删除
-							</Button>
-						)}
-					</>
-				),
+				toolbarExtra: hasPerm("system:dict:data:add") ? (
+					<Button
+						type="primary"
+						icon={<PlusOutlined />}
+						onClick={() => openDataAdd(record)}
+					>
+						新增数据
+					</Button>
+				) : null,
+				// 批量删除放入选中信息栏：渲染函数实时拿到选中行/个数，无需父组件登记选中
+				selectedActions: ({ selectedRows, selectedCount }) =>
+					hasPerm("system:dict:data:delete") && (
+						<Button
+							danger
+							icon={<DeleteOutlined />}
+							onClick={() => handleBatchDeleteData(selectedRows)}
+						>
+							批量删除({selectedCount})
+						</Button>
+					),
 				search: {
 					fields: [
 						{ type: "input", label: "数据标签", name: "dictLabel" },
@@ -463,7 +460,7 @@ const DictPage: React.FC = () => {
 				},
 			});
 		},
-		[dataColumns, hasPerm, openDataAdd, handleSelectData, handleBatchDeleteData],
+		[dataColumns, hasPerm, openDataAdd, handleBatchDeleteData],
 	);
 
 	// ---------- 字典类型：主表列 ----------
@@ -554,30 +551,28 @@ const DictPage: React.FC = () => {
 				api={Api.getDictTypeList}
 				columns={typeColumns}
 				title="字典类型"
-				onSelectRows={setSelectedTypes}
 				toolbarExtra={
-					<>
-						{hasPerm("system:dict:type:add") && (
-							<Button
-								type="primary"
-								icon={<PlusOutlined />}
-								onClick={openTypeAdd}
-							>
-								新增类型
-							</Button>
-						)}
-						{hasPerm("system:dict:type:delete") && (
-							<Button
-								danger
-								disabled={!selectedTypes.length}
-								onClick={handleBatchDeleteTypes}
-							>
-								{selectedTypes.length
-									? `批量删除(${selectedTypes.length})`
-									: "批量删除"}
-							</Button>
-						)}
-					</>
+					hasPerm("system:dict:type:add") ? (
+						<Button
+							type="primary"
+							icon={<PlusOutlined />}
+							onClick={openTypeAdd}
+						>
+							新增类型
+						</Button>
+					) : null
+				}
+				// 批量删除放入选中信息栏：未选中行时不展示，选中后按钮随实时个数联动
+				selectedActions={({ selectedRows, selectedCount }) =>
+					hasPerm("system:dict:type:delete") && (
+						<Button
+							danger
+							icon={<DeleteOutlined />}
+							onClick={() => handleBatchDeleteTypes(selectedRows)}
+						>
+							批量删除({selectedCount})
+						</Button>
+					)
 				}
 				search={{
 					fields: [
