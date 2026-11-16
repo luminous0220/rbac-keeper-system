@@ -10,17 +10,41 @@
 
 </div>
 
+<p align="center">
+  <a href="./docs/images/admin-login.png">
+    <img src="./docs/images/admin-login.png" alt="RBAC Keeper admin login page / 管理端登录页面" width="92%">
+  </a>
+</p>
+<p align="center"><sub>🖥️ 管理端登录页预览 · Admin login page preview</sub></p>
+
 ---
 
 <a id="中文"></a>
 
-## 中文
+## 🇨🇳 中文
 
 <p align="right"><a href="#english">切换到 English →</a></p>
 
 基于 RBAC 的后台权限管理系统，包含 React 管理端和 Go API 服务，提供用户、角色、菜单、部门、字典及登录/操作日志等功能。
 
-### 项目结构
+### 🖼️ 界面预览
+
+<table>
+  <tr>
+    <td align="center"><a href="./docs/images/admin-dashboard.png"><img src="./docs/images/admin-dashboard.png" alt="数据看板" width="100%"></a><br><sub>📊 数据看板</sub></td>
+    <td align="center"><a href="./docs/images/admin-users.png"><img src="./docs/images/admin-users.png" alt="用户管理" width="100%"></a><br><sub>👥 用户管理</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><a href="./docs/images/admin-roles.png"><img src="./docs/images/admin-roles.png" alt="角色管理" width="100%"></a><br><sub>🛡️ 角色管理</sub></td>
+    <td align="center"><a href="./docs/images/admin-departments.png"><img src="./docs/images/admin-departments.png" alt="部门管理" width="100%"></a><br><sub>🏢 部门管理</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><a href="./docs/images/admin-operation-logs.png"><img src="./docs/images/admin-operation-logs.png" alt="操作日志" width="100%"></a><br><sub>📝 操作日志</sub></td>
+    <td></td>
+  </tr>
+</table>
+
+### 📁 项目结构
 
 ```text
 .
@@ -47,7 +71,7 @@
     └── main.go             # 后端启动入口
 ```
 
-### 技术栈
+### 🧰 技术栈
 
 **管理端 (`admin/`)**
 
@@ -66,7 +90,7 @@
 - Viper：YAML 配置；zerolog：日志
 - MinIO 客户端已集成，但当前 `main.go` 中的 MinIO 初始化调用处于注释状态
 
-### 启动管理端
+### 🚀 启动管理端
 
 需要安装 Node.js 和 pnpm：
 
@@ -86,15 +110,15 @@ pnpm lint    # ESLint 检查
 pnpm preview # 本地预览生产构建
 ```
 
-### 初始化数据与启动服务端
+### 🗄️ 初始化数据与启动服务端
 
-#### 启动前准备
+#### 📋 启动前准备
 
 服务端启动时会连接 `server/config.yaml` 中配置的 MySQL、Redis 和 RocketMQ；这些服务应预先运行并可从当前机器访问。请先创建配置中 DSN 指定的 MySQL 数据库，并按本机环境修改配置中的地址、账号和密码。项目没有在此仓库提供这些依赖的统一启动编排。
 
 配置文件包含开发环境示例值。运行前请检查并替换所有连接凭据、JWT 密钥及服务地址；不要将真实密钥或生产凭据提交到版本库。当前启动流程需要 RocketMQ；MinIO 配置虽然存在，但启动代码暂未调用其初始化函数。
 
-#### 数据库迁移和 seed 数据
+#### 🌱 数据库迁移和 seed 数据
 
 运行 `go run .` 时，`server/main.go` 会先连接基础服务，再依次执行数据库迁移和内置数据初始化：
 
@@ -104,7 +128,7 @@ pnpm preview # 本地预览生产构建
 
 `server/initialize/seed.go` 中的开发用初始账号为 `super`、`admin01`、`admin02`、`user01`–`user03` 和 `staff01`–`staff04`。这些内置账号共用源码中的初始密码 `123456aaa`。**仅供本地开发/演示使用；成功登录后应立即修改密码，不要用于生产环境。** Seed 是否执行以 `super` 角色是否存在为准，不会在每次启动时自动补齐其他 seed 记录。
 
-#### 启动命令
+#### ▶️ 启动命令
 
 ```bash
 cd server
@@ -117,7 +141,7 @@ HTTP 服务监听 `config.yaml` 中 `server.port` 指定的端口（仓库示例
 - 就绪检查：`http://localhost:8001/readyz`
 - Swagger 文档：`http://localhost:8001/swagger/index.html`
 
-### `server/config/config.go` 配置说明
+### ⚙️ `server/config/config.go` 配置说明
 
 `config.CFG` 定义服务使用的配置结构；`LoadConfig(path)` 通过 Viper 在指定目录查找 `config.yaml` 并反序列化配置。当前 `main.go` 传入 `"."`，因此从 `server/` 目录启动时读取 `server/config.yaml`。配置文件中的 YAML 键与结构体的 `mapstructure` 标签对应。
 
@@ -141,13 +165,30 @@ HTTP 服务监听 `config.yaml` 中 `server.port` 指定的端口（仓库示例
 
 <a id="english"></a>
 
-## English
+## 🇬🇧 English
 
 <p align="right"><a href="#中文">切换到中文 →</a></p>
 
 An RBAC-based administration system with a React admin console and a Go API server. It includes user, role, menu, department, dictionary, login-log, and operation-log management.
 
-### Project Structure
+### 🖼️ Screenshots
+
+<table>
+  <tr>
+    <td align="center"><a href="./docs/images/admin-dashboard.png"><img src="./docs/images/admin-dashboard.png" alt="Dashboard" width="100%"></a><br><sub>📊 Dashboard</sub></td>
+    <td align="center"><a href="./docs/images/admin-users.png"><img src="./docs/images/admin-users.png" alt="User management" width="100%"></a><br><sub>👥 User management</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><a href="./docs/images/admin-roles.png"><img src="./docs/images/admin-roles.png" alt="Role management" width="100%"></a><br><sub>🛡️ Role management</sub></td>
+    <td align="center"><a href="./docs/images/admin-departments.png"><img src="./docs/images/admin-departments.png" alt="Department management" width="100%"></a><br><sub>🏢 Department management</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><a href="./docs/images/admin-operation-logs.png"><img src="./docs/images/admin-operation-logs.png" alt="Operation logs" width="100%"></a><br><sub>📝 Operation logs</sub></td>
+    <td></td>
+  </tr>
+</table>
+
+### 📁 Project Structure
 
 ```text
 .
@@ -174,7 +215,7 @@ An RBAC-based administration system with a React admin console and a Go API serv
     └── main.go             # Server entry point
 ```
 
-### Tech Stack
+### 🧰 Tech Stack
 
 **Admin (`admin/`)**
 
@@ -193,7 +234,7 @@ An RBAC-based administration system with a React admin console and a Go API serv
 - Viper for YAML configuration; zerolog for logging
 - A MinIO client is integrated, but its initialization call is currently commented out in `main.go`
 
-### Start the Admin App
+### 🚀 Start the Admin App
 
 Install Node.js and pnpm, then run:
 
@@ -213,15 +254,15 @@ pnpm lint    # Run ESLint
 pnpm preview # Preview the production build locally
 ```
 
-### Seed Data and Start the Server
+### 🗄️ Seed Data and Start the Server
 
-#### Prerequisites
+#### 📋 Prerequisites
 
 At startup, the server connects to MySQL, Redis, and RocketMQ as configured in `server/config.yaml`. Make sure these services are running and reachable, create the MySQL database named in the configured DSN, and update the addresses and credentials for your environment. This repository does not include a unified orchestration setup for these dependencies.
 
 The configuration file contains development example values. Review and replace all connection credentials, the JWT secret, and service addresses before running the application. Do not commit real secrets or production credentials. RocketMQ is required by the current startup flow. Although MinIO settings are present, MinIO initialization is not currently called at startup.
 
-#### Database Migration and Seed Data
+#### 🌱 Database Migration and Seed Data
 
 When you run `go run .`, `server/main.go` connects to the infrastructure and then performs database migration and built-in data initialization:
 
@@ -231,7 +272,7 @@ When you run `go run .`, `server/main.go` connects to the infrastructure and the
 
 Development accounts defined in `server/initialize/seed.go` are `super`, `admin01`, `admin02`, `user01`–`user03`, and `staff01`–`staff04`. All built-in accounts share the initial password `123456aaa`, defined in the source. **This password is for local development and demos only. Change it immediately after signing in, and never use it in production.** Seeding is gated by the presence of the `super` role; it does not automatically restore other seed records on every startup.
 
-#### Start the Server
+#### ▶️ Start the Server
 
 ```bash
 cd server
@@ -244,7 +285,7 @@ The HTTP server listens on the port configured by `server.port` in `config.yaml`
 - Readiness check: `http://localhost:8001/readyz`
 - Swagger UI: `http://localhost:8001/swagger/index.html`
 
-### `server/config/config.go` Configuration
+### ⚙️ `server/config/config.go` Configuration
 
 `config.CFG` defines the server configuration types. `LoadConfig(path)` uses Viper to find `config.yaml` in the specified directory and unmarshal it into the configuration struct. `main.go` currently passes `"."`, so running the server from `server/` loads `server/config.yaml`. YAML keys map to struct fields through their `mapstructure` tags.
 
