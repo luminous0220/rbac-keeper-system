@@ -31,15 +31,15 @@
 
 <table>
   <tr>
-    <td align="center"><a href="./docs/images/admin-dashboard.png"><img src="./docs/images/admin-dashboard.png" alt="数据看板" width="100%"></a><br><sub>📊 数据看板</sub></td>
-    <td align="center"><a href="./docs/images/admin-users.png"><img src="./docs/images/admin-users.png" alt="用户管理" width="100%"></a><br><sub>👥 用户管理</sub></td>
+    <td align="center"><a href="./docs/images/admin-dashboard.png"><img src="./docs/images/admin-dashboard.png" width="100%"></a></td>
+    <td align="center"><a href="./docs/images/admin-users.png"><img src="./docs/images/admin-users.png"  width="100%"></a></td>
   </tr>
   <tr>
-    <td align="center"><a href="./docs/images/admin-roles.png"><img src="./docs/images/admin-roles.png" alt="角色管理" width="100%"></a><br><sub>🛡️ 角色管理</sub></td>
-    <td align="center"><a href="./docs/images/admin-departments.png"><img src="./docs/images/admin-departments.png" alt="部门管理" width="100%"></a><br><sub>🏢 部门管理</sub></td>
+    <td align="center"><a href="./docs/images/admin-roles.png"><img src="./docs/images/admin-roles.png"  width="100%"></a></td>
+    <td align="center"><a href="./docs/images/admin-departments.png"><img src="./docs/images/admin-departments.png" width="100%"></a></td>
   </tr>
   <tr>
-    <td align="center"><a href="./docs/images/admin-operation-logs.png"><img src="./docs/images/admin-operation-logs.png" alt="操作日志" width="100%"></a><br><sub>📝 操作日志</sub></td>
+    <td align="center"><a href="./docs/images/admin-operation-logs.png"><img src="./docs/images/admin-operation-logs.png"  width="100%"></a></td>
     <td></td>
   </tr>
 </table>
@@ -145,17 +145,17 @@ HTTP 服务监听 `config.yaml` 中 `server.port` 指定的端口（仓库示例
 
 `config.CFG` 定义服务使用的配置结构；`LoadConfig(path)` 通过 Viper 在指定目录查找 `config.yaml` 并反序列化配置。当前 `main.go` 传入 `"."`，因此从 `server/` 目录启动时读取 `server/config.yaml`。配置文件中的 YAML 键与结构体的 `mapstructure` 标签对应。
 
-| 配置段 | 对应结构 | 用途 |
-| --- | --- | --- |
-| `mode` | `CFG.Mode` | 运行模式；影响 Gin 运行模式和日志/调试行为 |
-| `log-max-age` | `CFG.LogMaxAge` | 旧日志保留天数；小于等于 0 时不清理 |
-| `server` | `ServerConfig` | HTTP 监听端口、请求读取超时和响应写入超时 |
-| `mysql` | `MySQLConfig` | MySQL DSN、连接池上限/空闲连接、连接最大存活时间及 GORM 日志级别 |
-| `redis` | `RedisConfig` | Redis 地址、密码、数据库编号和连接池大小 |
-| `minio` | `MinIOConfig` | MinIO 端点、访问凭据、存储桶、TLS 和预签名 URL 有效期 |
-| `jwt` | `JWTConfig` | JWT 签名密钥、签发者，以及 Access/Refresh Token 有效期 |
-| `ratelimit` | `RateLimitConfig` | 限流速率和令牌桶突发容量 |
-| `rocketmq` | `RocketMQConfig` | NameServer/Broker 地址、ACL 凭据、消费者重试次数和发送超时 |
+| 配置段        | 对应结构          | 用途                                                             |
+| ------------- | ----------------- | ---------------------------------------------------------------- |
+| `mode`        | `CFG.Mode`        | 运行模式；影响 Gin 运行模式和日志/调试行为                       |
+| `log-max-age` | `CFG.LogMaxAge`   | 旧日志保留天数；小于等于 0 时不清理                              |
+| `server`      | `ServerConfig`    | HTTP 监听端口、请求读取超时和响应写入超时                        |
+| `mysql`       | `MySQLConfig`     | MySQL DSN、连接池上限/空闲连接、连接最大存活时间及 GORM 日志级别 |
+| `redis`       | `RedisConfig`     | Redis 地址、密码、数据库编号和连接池大小                         |
+| `minio`       | `MinIOConfig`     | MinIO 端点、访问凭据、存储桶、TLS 和预签名 URL 有效期            |
+| `jwt`         | `JWTConfig`       | JWT 签名密钥、签发者，以及 Access/Refresh Token 有效期           |
+| `ratelimit`   | `RateLimitConfig` | 限流速率和令牌桶突发容量                                         |
+| `rocketmq`    | `RocketMQConfig`  | NameServer/Broker 地址、ACL 凭据、消费者重试次数和发送超时       |
 
 修改配置时应保持 YAML 键名与结构体标签一致。`time.Duration` 字段使用 Go 时长格式，例如 `30s`、`1h`；MySQL DSN 需要启用 `parseTime=true`。生产环境请使用强随机 JWT 密钥，并通过安全的配置注入方式提供凭据。
 
@@ -289,17 +289,17 @@ The HTTP server listens on the port configured by `server.port` in `config.yaml`
 
 `config.CFG` defines the server configuration types. `LoadConfig(path)` uses Viper to find `config.yaml` in the specified directory and unmarshal it into the configuration struct. `main.go` currently passes `"."`, so running the server from `server/` loads `server/config.yaml`. YAML keys map to struct fields through their `mapstructure` tags.
 
-| YAML section | Go structure | Purpose |
-| --- | --- | --- |
-| `mode` | `CFG.Mode` | Runtime mode; affects Gin mode and logging/debug behavior |
-| `log-max-age` | `CFG.LogMaxAge` | Retention period for old logs; values less than or equal to 0 disable cleanup |
-| `server` | `ServerConfig` | HTTP port, request read timeout, and response write timeout |
-| `mysql` | `MySQLConfig` | MySQL DSN, connection pool limits, maximum connection lifetime, and GORM log level |
-| `redis` | `RedisConfig` | Redis address, password, database number, and pool size |
-| `minio` | `MinIOConfig` | MinIO endpoint, credentials, bucket, TLS, and presigned URL expiration |
-| `jwt` | `JWTConfig` | JWT signing secret, issuer, and Access/Refresh Token expiration |
-| `ratelimit` | `RateLimitConfig` | Token generation rate and burst capacity |
-| `rocketmq` | `RocketMQConfig` | NameServer/Broker addresses, ACL credentials, consumer retry limit, and send timeout |
+| YAML section  | Go structure      | Purpose                                                                              |
+| ------------- | ----------------- | ------------------------------------------------------------------------------------ |
+| `mode`        | `CFG.Mode`        | Runtime mode; affects Gin mode and logging/debug behavior                            |
+| `log-max-age` | `CFG.LogMaxAge`   | Retention period for old logs; values less than or equal to 0 disable cleanup        |
+| `server`      | `ServerConfig`    | HTTP port, request read timeout, and response write timeout                          |
+| `mysql`       | `MySQLConfig`     | MySQL DSN, connection pool limits, maximum connection lifetime, and GORM log level   |
+| `redis`       | `RedisConfig`     | Redis address, password, database number, and pool size                              |
+| `minio`       | `MinIOConfig`     | MinIO endpoint, credentials, bucket, TLS, and presigned URL expiration               |
+| `jwt`         | `JWTConfig`       | JWT signing secret, issuer, and Access/Refresh Token expiration                      |
+| `ratelimit`   | `RateLimitConfig` | Token generation rate and burst capacity                                             |
+| `rocketmq`    | `RocketMQConfig`  | NameServer/Broker addresses, ACL credentials, consumer retry limit, and send timeout |
 
 Keep YAML keys aligned with the struct tags. `time.Duration` values use Go duration syntax, such as `30s` or `1h`. The MySQL DSN must enable `parseTime=true`. For production, use a strong random JWT secret and provide credentials through a secure configuration mechanism.
 
