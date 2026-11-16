@@ -40,11 +40,7 @@
   </tr>
   <tr>
     <td align="center"><a href="./docs/images/admin-operation-logs.png"><img src="./docs/images/admin-operation-logs.png"  width="100%"></a></td>
-    <td></td>
-  </tr>
-    <tr>
     <td align="center"><a href="./docs/images/admin-operation-logs.png"><img src="./docs/images/admin-operation.png"  width="100%"></a></td>
-    <td></td>
   </tr>
 </table>
 
