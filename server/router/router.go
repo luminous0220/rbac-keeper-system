@@ -18,8 +18,6 @@ import (
 	"rbackeeper/config"
 	"rbackeeper/internal/health"
 	"rbackeeper/middleware"
-
-	_ "rbackeeper/docs" // swagger 生成的文档
 )
 
 // Setup 构造并注册路由引擎
