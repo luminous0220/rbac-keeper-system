@@ -31,6 +31,7 @@ import {
 	getAncestorKeys,
 } from "./utils";
 import { CaretDownOutlined, CaretRightOutlined } from "@ant-design/icons";
+import { useTranslation } from "react-i18next";
 export type {
 	TreeSelectorModalOpenProps,
 	TreeSelectorModalRef,
@@ -44,7 +45,7 @@ export type {
  */
 function TreeSelectorModalInner(
 	{
-		title: defaultTitle = "选择经营区域",
+		title: defaultTitle,
 		treeData: externalTreeData = [],
 		api: defaultApi,
 		width = 820,
@@ -52,12 +53,13 @@ function TreeSelectorModalInner(
 	}: TreeSelectorModalProps,
 	ref: React.ForwardedRef<TreeSelectorModalRef>,
 ) {
+	const { t } = useTranslation();
 	const [isOpen, setIsOpen] = useState(false);
 	const [searchText, setSearchText] = useState("");
 	const [modalCheckedKeys, setModalCheckedKeys] = useState<React.Key[]>([]);
 	const [expandedKeys, setExpandedKeys] = useState<React.Key[]>([]);
 	const [treeData, setTreeData] = useState<TreeNodeData[]>(externalTreeData);
-	const [modalTitle, setModalTitle] = useState(defaultTitle);
+	const [modalTitle, setModalTitle] = useState("");
 	const [loading, setLoading] = useState(false);
 	const apiRef = useRef<TreeSelectorApi | null>(null);
 
@@ -329,7 +331,7 @@ function TreeSelectorModalInner(
 
 	const open = useCallback(
 		(props: TreeSelectorModalOpenProps) => {
-			setModalTitle(props.title ?? defaultTitle);
+			setModalTitle(props.title ?? "");
 			setSearchText("");
 
 			// 恢复已选状态：checkedKeys 现在是简单 key 列表，直接使用
@@ -349,7 +351,7 @@ function TreeSelectorModalInner(
 				resetTreeData(td);
 			}
 		},
-		[externalTreeData, defaultTitle, fetchData, resetTreeData],
+		[externalTreeData, fetchData, resetTreeData],
 	);
 
 	const close = useCallback(() => setIsOpen(false), []);
@@ -360,14 +362,14 @@ function TreeSelectorModalInner(
 		<ProModal
 			open={isOpen}
 			onCancel={handleCancel}
-			title={modalTitle}
+			title={modalTitle || defaultTitle || t("selectorModal.selectArea")}
 			width={width}
 			footer={null}
 			destroyOnHidden
 		>
 			<div className="flex flex-col">
 				<Input
-					placeholder="请输入关键词"
+					placeholder={t("selectorModal.search")}
 					value={searchText}
 					onChange={(e) => setSearchText(e.target.value)}
 					allowClear
@@ -386,7 +388,9 @@ function TreeSelectorModalInner(
 							title={
 								<div className="flex justify-between items-center">
 									<div className="flex-center">
-										<span className="text-base mr-4">列表选择区域</span>
+										<span className="text-base mr-4">
+											{t("selectorModal.listArea")}
+										</span>
 										<Button
 											shape="circle"
 											size="small"
@@ -402,7 +406,9 @@ function TreeSelectorModalInner(
 									</div>
 
 									<Button type="link" size="small" onClick={handleSelectAll}>
-										{isAllSelected ? "取消全选" : "全选"}
+										{isAllSelected
+											? t("selectorModal.cancelSelectAll")
+											: t("selectorModal.selectAll")}
 									</Button>
 								</div>
 							}
@@ -410,7 +416,9 @@ function TreeSelectorModalInner(
 							<Spin spinning={loading}>
 								{filteredTreeData.length === 0 ? (
 									<div className="text-gray-400 text-center py-12">
-										{loading ? "加载中..." : "无匹配结果"}
+										{loading
+											? t("selectorModal.loading")
+											: t("selectorModal.noMatches")}
 									</div>
 								) : (
 									<Tree

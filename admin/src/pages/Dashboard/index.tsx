@@ -5,40 +5,41 @@ import { useChartColors } from "@/hooks/useChartColors";
 import { StatCard, type StatCardData } from "@/components/Card";
 import { Chart } from "@/components/Chart";
 import { useAuthStore } from "@/stores";
+import { useTranslation } from "react-i18next";
 
 // Dashboard 静态占位数据（已确认无需后端接口，仅做展示）
 const STAT_CARDS: StatCardData[] = [
 	{
 		id: "users",
-		title: "用户总数",
+		title: "dashboard.users",
 		value: 12847,
 		prefix: "",
 		suffix: "",
-		tooltip: "系统累计注册用户",
+		tooltip: "dashboard.userTooltip",
 		sparklineType: "line",
 		sparklineData: [20, 35, 28, 45, 38, 60, 72, 65, 80, 74, 92, 88],
 	},
 	{
 		id: "depts",
-		title: "部门数量",
+		title: "dashboard.departments",
 		value: 12,
-		tooltip: "当前组织架构部门数",
+		tooltip: "dashboard.departmentTooltip",
 		sparklineType: "bar",
 		sparklineData: [5, 8, 6, 9, 12, 10, 14],
 	},
 	{
 		id: "roles",
-		title: "角色数量",
+		title: "dashboard.roles",
 		value: 8,
-		tooltip: "已配置的角色数",
+		tooltip: "dashboard.roleTooltip",
 		sparklineType: "line",
 		sparklineData: [2, 4, 3, 5, 6, 8],
 	},
 	{
 		id: "ops",
-		title: "今日操作",
+		title: "dashboard.todayOperations",
 		value: 1234,
-		tooltip: "今日累计操作日志数",
+		tooltip: "dashboard.operationTooltip",
 		sparklineType: "bar",
 		sparklineData: [300, 420, 380, 510, 640, 580, 720, 810, 760, 920, 1030, 1234],
 	},
@@ -46,20 +47,20 @@ const STAT_CARDS: StatCardData[] = [
 
 // 分类销售额（横向柱状图）
 const SALE_DATA = [
-	{ name: "研发", value: 4200 },
-	{ name: "市场", value: 3600 },
-	{ name: "销售", value: 5200 },
-	{ name: "财务", value: 2100 },
-	{ name: "人力", value: 1500 },
+	{ name: "dashboard.development", value: 4200 },
+	{ name: "dashboard.marketing", value: 3600 },
+	{ name: "dashboard.sales", value: 5200 },
+	{ name: "dashboard.finance", value: 2100 },
+	{ name: "dashboard.humanResources", value: 1500 },
 ];
 
 // 流量来源占比（环形图）
 const SOURCE_DATA = [
-	{ name: "直接访问", value: 335 },
-	{ name: "搜索引擎", value: 468 },
-	{ name: "外链", value: 198 },
-	{ name: "社交媒体", value: 210 },
-	{ name: "邮件", value: 122 },
+	{ name: "dashboard.direct", value: 335 },
+	{ name: "dashboard.searchEngines", value: 468 },
+	{ name: "dashboard.externalLinks", value: 198 },
+	{ name: "dashboard.socialMedia", value: 210 },
+	{ name: "dashboard.email", value: 122 },
 ];
 
 // 实时趋势（面积图）
@@ -76,8 +77,27 @@ const TREND_DATA = [
 
 const Dashboard: React.FC = () => {
 	const colors = useChartColors();
+	const { t } = useTranslation();
 	const userInfo = useAuthStore((s) => s.userInfo);
-	const nickname = userInfo?.nickname || userInfo?.username || "管理员";
+	const nickname = userInfo?.nickname || userInfo?.username || t("dashboard.admin");
+	const statCards = useMemo(
+		() =>
+			STAT_CARDS.map((item) => {
+				const translated = { ...item, title: t(item.title) };
+				return item.tooltip
+					? { ...translated, tooltip: t(item.tooltip) }
+					: translated;
+			}),
+		[t],
+	);
+	const saleData = useMemo(
+		() => SALE_DATA.map((item) => ({ ...item, name: t(item.name) })),
+		[t],
+	);
+	const sourceData = useMemo(
+		() => SOURCE_DATA.map((item) => ({ ...item, name: t(item.name) })),
+		[t],
+	);
 
 	const horizontalBarOption = useMemo(
 		() => ({
@@ -90,7 +110,7 @@ const Dashboard: React.FC = () => {
 			},
 			yAxis: {
 				type: "category" as const,
-				data: SALE_DATA.map((d) => d.name),
+				data: saleData.map((d) => d.name),
 				axisLine: { show: false },
 				axisTick: { show: false },
 				axisLabel: { color: colors.textPrimary, fontSize: 12 },
@@ -98,7 +118,7 @@ const Dashboard: React.FC = () => {
 			series: [
 				{
 					type: "bar" as const,
-					data: SALE_DATA.map((d) => ({
+					data: saleData.map((d) => ({
 						value: d.value,
 						itemStyle: {
 							borderRadius: [0, 4, 4, 0],
@@ -112,11 +132,11 @@ const Dashboard: React.FC = () => {
 				},
 			],
 		}),
-		[colors],
+		[colors, saleData],
 	);
 
 	const donutOption = useMemo(() => {
-		const total = SOURCE_DATA.reduce((sum, item) => sum + item.value, 0);
+		const total = sourceData.reduce((sum, item) => sum + item.value, 0);
 		const colorsList = [
 			"#FFF6DE",
 			"#8BDFDD",
@@ -127,7 +147,7 @@ const Dashboard: React.FC = () => {
 			"#FAE7CB",
 			"#FA6781",
 		];
-		const dataWithColor = SOURCE_DATA.map((item, index) => ({
+		const dataWithColor = sourceData.map((item, index) => ({
 			...item,
 			itemStyle: { color: colorsList[index] ?? colorsList[0] },
 		}));
@@ -168,7 +188,7 @@ const Dashboard: React.FC = () => {
 				},
 			],
 		};
-	}, [colors]);
+	}, [colors, sourceData]);
 
 	const areaLineOption = useMemo(
 		() => ({
@@ -219,10 +239,10 @@ const Dashboard: React.FC = () => {
 				<div className="flex flex-col gap-4 p-6 md:flex-row md:items-center md:justify-between">
 					<div>
 						<h2 className="text-lg font-semibold text-[#1f2a44] dark:text-white">
-							欢迎回来，{nickname} 👋
+							{t("dashboard.greeting")}{nickname} 👋
 						</h2>
 						<p className="mt-1 text-sm text-[#7c8aa5]">
-							今天又是充满效率的一天，祝你工作顺利。
+							{t("dashboard.greetingMessage")}
 						</p>
 					</div>
 					<div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white text-3xl shadow-soft">
@@ -232,7 +252,7 @@ const Dashboard: React.FC = () => {
 			</div>
 
 			<Row gutter={[16, 16]}>
-				{STAT_CARDS.map((item) => (
+				{statCards.map((item) => (
 					<Col xs={24} sm={12} md={8} lg={6} key={item.id}>
 						<StatCard data={item} colors={colors} />
 					</Col>
@@ -241,10 +261,14 @@ const Dashboard: React.FC = () => {
 
 			<Row gutter={[16, 16]}>
 				<Col xs={24} lg={12}>
-					<Chart type="card" title="分类销售额" option={horizontalBarOption} />
+					<Chart
+						type="card"
+						title={t("dashboard.salesByCategory")}
+						option={horizontalBarOption}
+					/>
 				</Col>
 				<Col xs={24} lg={12}>
-					<Chart type="card" title="流量来源占比" option={donutOption} />
+					<Chart type="card" 					title={t("dashboard.trafficSources")} option={donutOption} />
 				</Col>
 			</Row>
 
@@ -252,7 +276,7 @@ const Dashboard: React.FC = () => {
 				<Col xs={24} lg={24}>
 					<Chart
 						type="card"
-						title="实时销售额趋势"
+						title={t("dashboard.salesTrend")}
 						option={areaLineOption}
 						height={280}
 					/>

@@ -5,12 +5,14 @@ import { getToken, clearAuthToken } from "@/libs/storage";
 import { CFG } from "@/constants";
 import { Api } from "@/apis";
 import { buildMenuTree } from "./utils";
+import { useTranslation } from "react-i18next";
 interface AuthGuardProps {
 	children: React.ReactNode;
 }
 
 export const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
 	const [loading, setLoading] = useState(true);
+	const { t } = useTranslation();
 	const location = useLocation();
 	const isRequestingRef = useRef(false);
 
@@ -83,7 +85,7 @@ export const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
 			<img
 				src={`${import.meta.env.BASE_URL}loading.svg`}
 				className="size-[25%] abs-center"
-				alt="图标"
+				alt={t("common.loading")}
 			/>
 		);
 	}

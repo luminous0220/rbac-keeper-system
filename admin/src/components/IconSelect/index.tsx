@@ -2,6 +2,7 @@ import React, { useMemo } from "react";
 import { AutoComplete, Input } from "antd";
 import type { AutoCompleteProps } from "antd";
 import { IconMap } from "@/libs/iconMap";
+import { useTranslation } from "react-i18next";
 
 interface IconSelectProps extends Omit<
 	AutoCompleteProps,
@@ -20,6 +21,7 @@ export const IconSelect: React.FC<IconSelectProps> = ({
 	onChange,
 	...props
 }) => {
+	const { t } = useTranslation();
 	const options = useMemo(
 		() =>
 			Object.entries(iconMap).map(([key, node]) => ({
@@ -39,7 +41,7 @@ export const IconSelect: React.FC<IconSelectProps> = ({
 
 	return (
 		<AutoComplete
-			placeholder="搜索或直接输入图标名称"
+			placeholder={t("iconSelect.placeholder")}
 			{...props}
 			value={value}
 			options={options}

@@ -10,6 +10,7 @@ import type {
 	TableSelectorModalRef,
 	TableSelectorModalProps,
 } from "./types";
+import { useTranslation } from "react-i18next";
 
 export type {
 	TableSelectorModalOpenProps,
@@ -24,7 +25,7 @@ export type {
  */
 function TableSelectorModalInner<T extends Record<string, any> = Record<string, any>>(
 	{
-		title: defaultTitle = "选择数据",
+		title: defaultTitle,
 		width = 1280,
 		selectionType = "checkbox",
 		onConfirm,
@@ -37,10 +38,11 @@ function TableSelectorModalInner<T extends Record<string, any> = Record<string, 
 	}: TableSelectorModalProps<T>,
 	ref: React.ForwardedRef<TableSelectorModalRef>,
 ) {
+	const { t } = useTranslation();
 	const isRadio = selectionType === "radio";
 
 	const [isOpen, setIsOpen] = useState(false);
-	const [modalTitle, setModalTitle] = useState(defaultTitle);
+	const [modalTitle, setModalTitle] = useState("");
 	const [modalCheckedKeys, setModalCheckedKeys] = useState<React.Key[]>([]);
 	const [modalItemCache, setModalItemCache] = useState<Record<string, TableSelectorNode>>({});
 
@@ -151,7 +153,7 @@ function TableSelectorModalInner<T extends Record<string, any> = Record<string, 
 
 	const open = useCallback(
 		(props: TableSelectorModalOpenProps) => {
-			setModalTitle(props.title ?? defaultTitle);
+			setModalTitle(props.title ?? "");
 			// 恢复已选状态：checkedKeys 现在是简单 key 列表
 			// cache 仅保留之前已选且仍在新 keys 中的项（首次打开 cache 为空，SelectedPanel 不展示旧 title）
 			if (props.checkedKeys?.length) {
@@ -171,7 +173,7 @@ function TableSelectorModalInner<T extends Record<string, any> = Record<string, 
 			}
 			setIsOpen(true);
 		},
-		[defaultTitle],
+		[],
 	);
 
 	const close = useCallback(() => setIsOpen(false), []);
@@ -192,7 +194,7 @@ function TableSelectorModalInner<T extends Record<string, any> = Record<string, 
 		<ProModal
 			open={isOpen}
 			onCancel={handleCancel}
-			title={modalTitle}
+			title={modalTitle || defaultTitle || t("selectorModal.selectData")}
 			width={width}
 			footer={null}
 			destroyOnHidden
@@ -200,7 +202,10 @@ function TableSelectorModalInner<T extends Record<string, any> = Record<string, 
 			<div className="flex flex-col">
 				<div className="gap-5 min-h-0 grid grid-cols-10 max-md:grid-cols-1">
 					<div className={isRadio ? "col-span-10" : "col-span-7"}>
-						<ProTable<T> title="列表选择区域" {...proTableProps} />
+						<ProTable<T>
+							title={t("selectorModal.listArea")}
+							{...proTableProps}
+						/>
 					</div>
 					{!isRadio && (
 						<div className="col-span-3">

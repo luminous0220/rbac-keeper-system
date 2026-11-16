@@ -11,29 +11,36 @@ import { usePerms } from "@/hooks";
 import dayjs from "dayjs";
 import IconSelect from "@/components/IconSelect";
 import { IconMap } from "@/libs";
+import { useTranslation } from "react-i18next";
 
 // 菜单类型：M菜单 C目录 F功能（与 model.Menu.menu_type 一致）
 const MENU_TYPE_OPTIONS = [
-	{ label: "菜单", value: "M" },
-	{ label: "目录", value: "C" },
-	{ label: "功能", value: "F" },
+	{ label: "menu.typeMenu", value: "M" },
+	{ label: "menu.typeDirectory", value: "C" },
+	{ label: "menu.typeFunction", value: "F" },
 ];
 const MENU_TYPE_TEXT: Record<string, { text: string; color: string }> = {
-	M: { text: "菜单", color: "blue" },
-	C: { text: "目录", color: "orange" },
-	F: { text: "功能", color: "default" },
+	M: { text: "menu.typeMenu", color: "blue" },
+	C: { text: "menu.typeDirectory", color: "orange" },
+	F: { text: "menu.typeFunction", color: "default" },
 };
 // 菜单状态与 model 一致：1=正常 0=停用（前端 buildMenuTree 以 status===1 过滤）
-const MENU_STATUS_TEXT: Record<number, string> = { 1: "正常", 0: "停用" };
+const MENU_STATUS_TEXT: Record<number, string> = {
+	1: "common.enabled",
+	0: "common.disabled",
+};
 const MENU_STATUS_OPTIONS = [
-	{ label: "正常", value: 1 },
-	{ label: "停用", value: 0 },
+	{ label: "common.enabled", value: 1 },
+	{ label: "common.disabled", value: 0 },
 ];
 // 显示状态：0隐藏 1显示
-const VISIBLE_TEXT: Record<number, string> = { 1: "显示", 0: "隐藏" };
+const VISIBLE_TEXT: Record<number, string> = {
+	1: "menu.shown",
+	0: "menu.hidden",
+};
 const VISIBLE_OPTIONS = [
-	{ label: "显示", value: 1 },
-	{ label: "隐藏", value: 0 },
+	{ label: "menu.shown", value: 1 },
+	{ label: "menu.hidden", value: 0 },
 ];
 // 权限标识三段式：模块:实体:动作（与后端 validateMenuPerms 一致）
 const PERMS_RE = /^[a-z][a-z0-9_]*:[a-z][a-z0-9_]*:[a-z][a-z0-9_]*$/;
@@ -87,24 +94,28 @@ function buildMenuFields(
 	menuTypeDisabled: boolean,
 	dirTree: any[],
 	menuDirTree: any[],
+	t: ReturnType<typeof useTranslation>["t"],
 ): ProFormFields {
 	return [
 		{
 			type: "radio",
-			label: "菜单类型",
+			label: t("menu.typeLabel"),
 			name: "menuType",
 			disabled: menuTypeDisabled,
 			fieldProps: {
 				block: true,
-				options: MENU_TYPE_OPTIONS,
+				options: MENU_TYPE_OPTIONS.map((item) => ({
+					...item,
+					label: t(item.label),
+				})),
 				optionType: "button",
 				buttonStyle: "solid",
 				disabled: true,
 			},
-			rules: [{ required: true, message: "请选择菜单类型" }],
+			rules: [{ required: true, message: t("menu.typeLabel") }],
 		},
 		{
-			label: "上级菜单",
+			label: t("menu.parent"),
 			name: "parentId",
 			// 自定义渲染：树需随 menuType 切换过滤范围，故不走静态 fieldProps
 			render: (value, form) => {
@@ -116,7 +127,9 @@ function buildMenuFields(
 						allowClear
 						showSearch
 						treeDefaultExpandAll
-						placeholder={type === "F" ? "请选择所属菜单" : "不选择则为顶级目录"}
+						placeholder={
+							type === "F" ? t("menu.selectOwnerMenu") : t("menu.rootHint")
+						}
 						onChange={(v) => form.setFieldValue("parentId", v)}
 					/>
 				);
@@ -124,22 +137,22 @@ function buildMenuFields(
 		},
 		{
 			type: "input",
-			label: "菜单名称",
+			label: t("menu.name"),
 			name: "menuName",
-			fieldProps: { maxLength: 50, placeholder: "2-50 个字符" },
+			fieldProps: { maxLength: 50, placeholder: t("menu.namePlaceholder") },
 			rules: [
-				{ required: true, message: "请输入菜单名称" },
-				{ min: 2, max: 50, message: "菜单名称长度需为 2-50 位" },
+				{ required: true, message: t("menu.nameRequired") },
+				{ min: 2, max: 50, message: t("menu.nameLength") },
 			],
 		},
 		{
 			type: "input-number",
-			label: "显示顺序",
+			label: t("menu.order"),
 			name: "orderNum",
 			fieldProps: { min: 0, style: { width: "100%" } },
 		},
 		{
-			label: "图标",
+			label: t("menu.icon"),
 			name: "icon",
 			render: (value: string, form) => {
 				return (
@@ -155,11 +168,11 @@ function buildMenuFields(
 		},
 		{
 			type: "input",
-			label: "路由地址",
+			label: t("menu.route"),
 			name: "path",
 			fieldProps: {
 				maxLength: 200,
-				placeholder: "如 system（目录）或 user（菜单）",
+				placeholder: t("menu.routePlaceholder"),
 			},
 			visible: (values) => values.menuType !== "F",
 			// 功能(F) 下该字段隐藏且无需校验（antd 隐藏字段仍会校验，用 RuleRender 按类型动态判断）
@@ -169,17 +182,17 @@ function buildMenuFields(
 						? null
 						: value
 							? null
-							: "请输入路由地址",
+							: t("menu.enterRoute"),
 				),
 			],
 		},
 		{
 			type: "input",
-			label: "组件路径",
+			label: t("menu.component"),
 			name: "component",
 			fieldProps: {
 				maxLength: 255,
-				placeholder: "如 system/user/index（菜单必填）",
+				placeholder: t("menu.componentPlaceholder"),
 			},
 			visible: (values) => values.menuType === "M",
 			rules: [
@@ -188,24 +201,24 @@ function buildMenuFields(
 						? null
 						: value
 							? null
-							: "请输入组件路径",
+							: t("menu.enterComponent"),
 				),
 			],
 		},
 		{
 			type: "input",
-			label: "路由参数",
+			label: t("menu.routeParams"),
 			name: "query",
-			fieldProps: { maxLength: 255, placeholder: "选填" },
+			fieldProps: { maxLength: 255, placeholder: t("menu.optional") },
 			visible: (values) => values.menuType === "M",
 		},
 		{
 			type: "input",
-			label: "权限标识",
+			label: t("menu.permission"),
 			name: "perms",
 			fieldProps: {
 				maxLength: 100,
-				placeholder: "三段式：模块:实体:动作，如 system:user:list",
+				placeholder: t("menu.permissionPlaceholder"),
 			},
 			// 菜单(M)/目录(C) 不再填写权限标识，仅功能(F) 显示
 			visible: (values) => values.menuType === "F",
@@ -214,9 +227,9 @@ function buildMenuFields(
 					// 仅功能(F) 校验；菜单/目录隐藏字段不参与校验
 					if (form.getFieldValue("menuType") !== "F") return null;
 					const v = value ? String(value) : "";
-					if (!v) return "功能必须填写权限标识";
+					if (!v) return t("menu.permissionRequired");
 					if (!PERMS_RE.test(v)) {
-						return "权限标识需为 模块:实体:动作 三段式（小写字母/数字/下划线）";
+						return t("menu.permissionFormat");
 					}
 					return null;
 				}),
@@ -224,26 +237,36 @@ function buildMenuFields(
 		},
 		{
 			type: "radio",
-			label: "显示状态",
+			label: t("menu.visible"),
 			name: "visible",
-			fieldProps: { options: VISIBLE_OPTIONS },
+			fieldProps: {
+				options: VISIBLE_OPTIONS.map((item) => ({
+					...item,
+					label: t(item.label),
+				})),
+			},
 			visible: (values) => values.menuType !== "F",
 		},
 		{
 			type: "radio",
-			label: "菜单状态",
+			label: t("menu.status"),
 			name: "status",
-			fieldProps: { options: MENU_STATUS_OPTIONS },
-			rules: [{ required: true, message: "请选择菜单状态" }],
+			fieldProps: {
+				options: MENU_STATUS_OPTIONS.map((item) => ({
+					...item,
+					label: t(item.label),
+				})),
+			},
+			rules: [{ required: true, message: t("menu.statusRequired") }],
 		},
 		{
 			type: "textarea",
-			label: "备注",
+			label: t("menu.note"),
 			name: "remark",
 			fieldProps: {
 				maxLength: 500,
 				rows: 3,
-				placeholder: "请输入备注（选填）",
+				placeholder: t("department.remarkPlaceholder"),
 			},
 		},
 	];
@@ -258,6 +281,7 @@ function buildMenuFields(
  */
 const MenuPage: React.FC = () => {
 	const { message } = App.useApp();
+	const { t } = useTranslation();
 	const { hasPerm } = usePerms();
 	const tableRef = useRef<ProTableRef<IApi.MenuRaw>>(null);
 	const formRef = useRef<ProFormInstance>(null);
@@ -292,8 +316,8 @@ const MenuPage: React.FC = () => {
 	// 动态生成字段：编辑模式 menuType 置灰
 	const getFormFields = useCallback((): ProFormFields => {
 		const menuTypeDisabled = formMode.type === "edit";
-		return buildMenuFields(menuTypeDisabled, dirTreeData, menuDirTreeData);
-	}, [formMode.type, dirTreeData, menuDirTreeData]);
+		return buildMenuFields(menuTypeDisabled, dirTreeData, menuDirTreeData, t);
+	}, [formMode.type, dirTreeData, menuDirTreeData, t]);
 
 	// 打开新增：指定父级时按父类型预选 menuType（C 目录下默认菜单 M；M 菜单下默认功能 F）
 	const openAdd = useCallback((parent?: IApi.MenuRaw) => {
@@ -307,17 +331,17 @@ const MenuPage: React.FC = () => {
 		}
 		formRef.current?.open({
 			title: parent
-				? `新增${parent.menu_type === "C" ? "菜单" : "功能"}`
-				: "新增菜单",
+				? `${t("menu.addItem")}${parent.menu_type === "C" ? t("menu.typeMenu") : t("menu.typeFunction")}`
+				: t("menu.add"),
 			initialValues: base,
 		});
-	}, []);
+	}, [t]);
 
 	// 打开编辑
 	const openEdit = useCallback((record: IApi.MenuRaw) => {
 		setFormMode({ type: "edit", record });
 		formRef.current?.open({
-			title: `编辑菜单：${record.menu_name}`,
+			title: `${t("menu.edit")}: ${record.menu_name}`,
 			// 根菜单 parent_id=0 置 undefined，展示占位「不选择则为顶级目录」
 			initialValues: {
 				menuType: record.menu_type,
@@ -335,7 +359,7 @@ const MenuPage: React.FC = () => {
 			},
 			extraParams: { id: record.id },
 		});
-	}, []);
+	}, [t]);
 
 	// 统一提交
 	const handleFormSubmit = useCallback(
@@ -360,31 +384,31 @@ const MenuPage: React.FC = () => {
 			};
 			if (formMode.type === "add") {
 				await Api.addMenu(payload);
-				message.success("新增菜单成功");
+				message.success(t("menu.addSuccess"));
 			} else {
 				const id = extraParams?.id as number;
 				await Api.editMenu(id, payload);
-				message.success("修改菜单成功");
+				message.success(t("menu.editSuccess"));
 			}
 			tableRef.current?.refresh();
 		},
-		[formMode.type, message],
+		[formMode.type, message, t],
 	);
 
 	// ---- 删除菜单 ----
 	const handleDelete = useCallback(
 		async (record: IApi.MenuRaw) => {
 			await Api.deleteMenu(record.id);
-			message.success("删除菜单成功");
+			message.success(t("menu.deleteSuccess"));
 			tableRef.current?.refresh();
 		},
-		[message],
+		[message, t],
 	);
 
 	// ---- 列配置 ----
 	const columns: ProTableColumnType<IApi.MenuRaw>[] = [
 		{
-			title: "菜单名称",
+			title: t("menu.name"),
 			minWidth:240,
 			dataIndex: "menu_name",
 			render: (v, record) => (
@@ -398,17 +422,17 @@ const MenuPage: React.FC = () => {
 			width: 200,
 		},
 		{
-			title: "类型",
+			title: t("menu.type"),
 			dataIndex: "menu_type",
 			width: 80,
 			render: (value) => {
 				const cfg = MENU_TYPE_TEXT[(value as string) ?? ""];
-				return cfg ? <Tag color={cfg.color}>{cfg.text}</Tag> : "-";
+				return cfg ? <Tag color={cfg.color}>{t(cfg.text)}</Tag> : "-";
 			},
 		},
-		{ title: "显示顺序", dataIndex: "order_num", width: 90 },
+		{ title: t("system.displayOrder"), dataIndex: "order_num", width: 90 },
 		{
-			title: "权限标识",
+			title: t("menu.permission"),
 			dataIndex: "perms",
 			width: 190,
 			ellipsis: true,
@@ -416,14 +440,14 @@ const MenuPage: React.FC = () => {
 				value ? <Typography.Text code>{value as string}</Typography.Text> : "-",
 		},
 		{
-			title: "路由地址",
+			title: t("menu.route"),
 			dataIndex: "path",
 			width: 130,
 			render: (value) =>
 				value ? <Typography.Text code>{value as string}</Typography.Text> : "-",
 		},
 		{
-			title: "组件路径",
+			title: t("menu.component"),
 			dataIndex: "component",
 			width: 190,
 			ellipsis: true,
@@ -431,33 +455,33 @@ const MenuPage: React.FC = () => {
 				value ? <Typography.Text code>{value as string}</Typography.Text> : "-",
 		},
 		{
-			title: "可见",
+			title: t("menu.visible"),
 			dataIndex: "visible",
 			width: 70,
 			render: (value) => (
 				<Tag color={(value as number) === 1 ? "green" : "red"}>
-					{VISIBLE_TEXT[(value as number) ?? 0] ?? "-"}
+					{t(VISIBLE_TEXT[(value as number) ?? 0] ?? "-")}
 				</Tag>
 			),
 		},
 		{
-			title: "状态",
+			title: t("system.status"),
 			dataIndex: "status",
 			width: 80,
 			render: (value) => (
 				<Tag color={(value as number) === 1 ? "green" : "red"}>
-					{MENU_STATUS_TEXT[(value as number) ?? 0] ?? "-"}
+					{t(MENU_STATUS_TEXT[(value as number) ?? 0] ?? "-")}
 				</Tag>
 			),
 		},
 		{
-			title: "创建时间",
+			title: t("system.createdAt"),
 			dataIndex: "createdAt",
 			width: 170,
 			render: (time) => dayjs(time).format("YYYY-MM-DD HH:mm:ss"),
 		},
 		{
-			title: "操作",
+			title: t("system.action"),
 			key: "action",
 			width: 260,
 			fixed: "right",
@@ -471,7 +495,10 @@ const MenuPage: React.FC = () => {
 							icon={<PlusOutlined />}
 							onClick={() => openAdd(record)}
 						>
-							新增{record.menu_type === "C" ? "菜单" : "功能"}
+							{t("menu.addItem")}
+							{record.menu_type === "C"
+								? t("menu.typeMenu")
+								: t("menu.typeFunction")}
 						</Button>
 					)}
 					{hasPerm("system:menu:edit") && (
@@ -482,15 +509,15 @@ const MenuPage: React.FC = () => {
 							icon={<EditOutlined />}
 							onClick={() => openEdit(record)}
 						>
-							编辑
+							{t("system.edit")}
 						</Button>
 					)}
 					{hasPerm("system:menu:remove") && (
 						<Popconfirm
-							title="确定删除该菜单吗？"
-							description="存在子菜单或功能时将被拦截"
-							okText="删除"
-							cancelText="取消"
+							title={t("menu.deleteConfirm")}
+							description={t("menu.deleteBlocked")}
+							okText={t("system.delete")}
+							cancelText={t("common.cancel")}
 							okButtonProps={{ danger: true }}
 							onConfirm={() => handleDelete(record)}
 						>
@@ -500,7 +527,7 @@ const MenuPage: React.FC = () => {
 								variant="filled"
 								icon={<DeleteOutlined />}
 							>
-								删除
+								{t("system.delete")}
 							</Button>
 						</Popconfirm>
 					)}
@@ -516,7 +543,7 @@ const MenuPage: React.FC = () => {
 				rowKey="id"
 				api={menuTreeApi}
 				columns={columns}
-				title="菜单管理"
+				title={t("menu.title")}
 				index={false}
 				toolbarExtra={
 					hasPerm("system:menu:add") ? (
@@ -525,18 +552,24 @@ const MenuPage: React.FC = () => {
 							icon={<PlusOutlined />}
 							onClick={() => openAdd()}
 						>
-							新增菜单
+							{t("menu.add")}
 						</Button>
 					) : undefined
 				}
 				search={{
 					fields: [
-						{ type: "input", label: "菜单名称", name: "menuName" },
+						{ type: "input", label: t("menu.name"), name: "menuName" },
 						{
 							type: "select",
-							label: "状态",
+							label: t("system.status"),
 							name: "status",
-							fieldProps: { options: MENU_STATUS_OPTIONS, allowClear: true },
+							fieldProps: {
+								options: MENU_STATUS_OPTIONS.map((item) => ({
+									...item,
+									label: t(item.label),
+								})),
+								allowClear: true,
+							},
 						},
 					],
 				}}

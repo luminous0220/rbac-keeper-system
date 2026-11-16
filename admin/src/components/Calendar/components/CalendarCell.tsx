@@ -11,6 +11,7 @@ import {
 } from "@ant-design/icons";
 import { isToday, isOtherMonth, isOverdue } from "../utils";
 import type { CalendarReminder } from "../types.d";
+import { useTranslation } from "react-i18next";
 
 interface CalendarCellProps {
 	date: Dayjs;
@@ -23,25 +24,6 @@ interface CalendarCellProps {
 	onDeleteReminder: (id: string) => void;
 }
 
-const reminderMenuItems: MenuProps["items"] = [
-	{
-		key: "edit",
-		label: "编辑",
-		icon: <EditOutlined />,
-	},
-	{
-		key: "complete",
-		label: "完成",
-		icon: <CheckOutlined />,
-	},
-	{
-		key: "delete",
-		label: "删除",
-		icon: <DeleteOutlined />,
-		danger: true,
-	},
-];
-
 export const CalendarCell: React.FC<CalendarCellProps> = React.memo(
 	({
 		date,
@@ -53,11 +35,22 @@ export const CalendarCell: React.FC<CalendarCellProps> = React.memo(
 		onCompleteReminder,
 		onDeleteReminder,
 	}) => {
+		const { t } = useTranslation();
 		const today = isToday(date);
 		const otherMonth = isOtherMonth(date, currentMonth);
 		const dateStr = date.format("YYYY-MM-DD");
 		const isPast = date.isBefore(dayjs(), "day");
 		const skipClickRef = useRef(false);
+		const reminderMenuItems: MenuProps["items"] = [
+			{ key: "edit", label: t("calendar.edit"), icon: <EditOutlined /> },
+			{ key: "complete", label: t("calendar.complete"), icon: <CheckOutlined /> },
+			{
+				key: "delete",
+				label: t("calendar.delete"),
+				icon: <DeleteOutlined />,
+				danger: true,
+			},
+		];
 
 		const handleCellClick = useCallback(() => {
 			if (skipClickRef.current) {
@@ -65,11 +58,11 @@ export const CalendarCell: React.FC<CalendarCellProps> = React.memo(
 				return;
 			}
 			if (isPast) {
-				window.$message.info("不能选择过去时间");
+				window.$message.info(t("calendar.pastDateDisabled"));
 				return;
 			}
 			onAddReminder(dateStr);
-		}, [isPast, dateStr, onAddReminder]);
+		}, [isPast, dateStr, onAddReminder, t]);
 
 		const handleReminderMenuClick = useCallback(
 			(r: CalendarReminder) =>
@@ -87,11 +80,11 @@ export const CalendarCell: React.FC<CalendarCellProps> = React.memo(
 			return [
 				{
 					key: "add",
-					label: "新增提醒",
+					label: t("calendar.addReminder"),
 					icon: <BellOutlined />,
 				},
 			];
-		}, [isPast]);
+		}, [isPast, t]);
 
 		return (
 			<Dropdown

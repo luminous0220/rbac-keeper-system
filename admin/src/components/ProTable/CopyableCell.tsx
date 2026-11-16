@@ -1,23 +1,25 @@
 import { IconCopy } from "@tabler/icons-react";
 import { Button } from "antd";
 import React, { useCallback } from "react";
+import { useTranslation } from "react-i18next";
 
 export const CopyableCell: React.FC<{
 	text: string;
 	children?: React.ReactNode;
 	className?: string;
 }> = React.memo(({ text, children, className = "" }) => {
+	const { t } = useTranslation();
 	const handleCopy = useCallback(
 		async (e: React.MouseEvent) => {
 			e.stopPropagation();
 			try {
 				await navigator.clipboard.writeText(String(text));
-				window.$message?.success?.("复制成功");
+				window.$message?.success?.(t("table.copySuccess"));
 			} catch {
-				window.$message?.error?.("复制失败");
+				window.$message?.error?.(t("table.copyFailed"));
 			}
 		},
-		[text],
+		[text, t],
 	);
 
 	return (

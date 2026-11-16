@@ -9,6 +9,7 @@ import {
 import { ListCard, ListItem } from '@/components/Card';
 import { useCalendarStore } from '@/stores';
 import type { CalendarReminder } from '../types.d';
+import { useTranslation } from 'react-i18next';
 
 const { Text } = Typography;
 
@@ -24,6 +25,7 @@ const NotificationList: React.FC<NotificationListProps> = ({
   const reminders = useCalendarStore((s) => s.reminders);
   const completeReminder = useCalendarStore((s) => s.completeReminder);
   const deleteReminder = useCalendarStore((s) => s.deleteReminder);
+  const { t } = useTranslation();
 
   const sorted = useMemo(() => {
     return [...reminders]
@@ -34,14 +36,17 @@ const NotificationList: React.FC<NotificationListProps> = ({
   if (sorted.length === 0) {
     return (
       <div style={{ width: 360, padding: 16, textAlign: 'center' }}>
-        <Text type="secondary">暂无提醒</Text>
+        <Text type="secondary">{t("calendar.noReminders")}</Text>
       </div>
     );
   }
 
   return (
     <div style={{ width: 420, maxHeight: 480, overflow: 'auto' }}>
-      <ListCard title="提醒中心" subtitle={`共 ${sorted.length} 项`}>
+      <ListCard
+        title={t("calendar.reminderCenter")}
+        subtitle={t("calendar.reminderCount", { count: sorted.length })}
+      >
         {sorted.map((r) => (
           <ListItem
             key={r.id}
@@ -81,7 +86,9 @@ const NotificationList: React.FC<NotificationListProps> = ({
                     <Text type="secondary" style={{ fontSize: 12, color: '#ff4d4f' }}>
                       {dayjs(r.dateTime).format('YYYY-MM-DD HH:mm')}
                     </Text>
-                    <Tag color="error" style={{ fontSize: 11, lineHeight: '18px' }}>已过期</Tag>
+                    <Tag color="error" style={{ fontSize: 11, lineHeight: '18px' }}>
+                      {t("calendar.expired")}
+                    </Tag>
                   </>
                 ) : (
                   <Text type="secondary" style={{ fontSize: 12 }}>

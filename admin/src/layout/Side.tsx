@@ -7,6 +7,8 @@ import { memo, useCallback, useMemo } from "react";
 import { useThemeStore } from "@/stores/theme";
 import { IconMap } from "@/libs";
 import type { IApi } from "@/apis";
+import { useTranslation } from "react-i18next";
+import { translateMenuTitle } from "@/i18n/menu";
 
 interface ISideProps extends CollapseProps {
 	className?: string;
@@ -38,15 +40,21 @@ const ITEM_PADDING_X = 12;
  * @param children 子菜单列表
  * @param depth 当前层级
  */
-const collectItems = (children: IApi.MenuRaw[], depth: number): SideItem[] =>
+const collectItems = (
+	children: IApi.MenuRaw[],
+	depth: number,
+	translate: (key: string) => string,
+): SideItem[] =>
 	children.flatMap((child) => [
 		{
 			key: child.path,
-			title: child.menu_name,
+			title: translateMenuTitle(child.path, child.component, child.menu_name, translate),
 			icon: IconMap[child.icon],
 			depth,
 		},
-		...(child.children?.length ? collectItems(child.children, depth + 1) : []),
+		...(child.children?.length
+			? collectItems(child.children, depth + 1, translate)
+			: []),
 	]);
 
 /**
@@ -54,6 +62,7 @@ const collectItems = (children: IApi.MenuRaw[], depth: number): SideItem[] =>
  */
 const SideHeader = ({ collapsed }: { collapsed?: boolean }) => {
 	const { token } = theme.useToken();
+	const { t } = useTranslation();
 
 	return (
 		<div
@@ -79,7 +88,7 @@ const SideHeader = ({ collapsed }: { collapsed?: boolean }) => {
 						className="mt-1.5 text-xs"
 						style={{ color: token.colorTextTertiary }}
 					>
-						管理平台
+						{t("layout.platform")}
 					</p>
 				</div>
 			)}
@@ -186,6 +195,7 @@ export const Side = ({
 	width = 256,
 	collapsedWidth = 64,
 }: ISideProps) => {
+	const { t } = useTranslation();
 	const location = useLocation();
 	const menus = useAuthStore((s) => s.menus);
 	const navigate = useNavigate();
@@ -199,13 +209,23 @@ export const Side = ({
 			if (top.children?.length) {
 				result.push({
 					key: String(top.id),
-					title: top.menu_name,
-					items: collectItems(top.children, 1),
+					title: translateMenuTitle(
+						top.path,
+						top.component,
+						top.menu_name,
+						(key) => t(key),
+					),
+					items: collectItems(top.children, 1, (key) => t(key)),
 				});
 			} else {
 				workbench.push({
 					key: top.path,
-					title: top.menu_name,
+					title: translateMenuTitle(
+						top.path,
+						top.component,
+						top.menu_name,
+						(key) => t(key),
+					),
 					icon: IconMap[top.icon],
 					depth: 0,
 				});
@@ -213,11 +233,11 @@ export const Side = ({
 		}
 
 		if (workbench.length) {
-			result.unshift({ key: "workbench", title: "工作台", items: workbench });
+			result.unshift({ key: "workbench", title: t("layout.workbench"), items: workbench });
 		}
 
 		return result;
-	}, [menus]);
+	}, [menus, t]);
 
 	// 当前选中项：精确匹配路径，兜底回首页
 	const selectedKey = useMemo(() => {

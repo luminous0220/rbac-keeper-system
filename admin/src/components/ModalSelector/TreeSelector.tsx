@@ -3,6 +3,7 @@ import { SelectorTrigger } from "./components/SelectorTrigger";
 import { TreeSelectorModal, type TreeSelectorModalRef } from "./TreeSelectorModal";
 import type { TreeSelectorKey, TreeSelectorProps } from "./types";
 import { findNode, getDescendantKeys } from "./utils";
+import { useTranslation } from "react-i18next";
 
 export type {
 	TreeNodeData,
@@ -26,11 +27,13 @@ export const TreeSelector: React.FC<TreeSelectorProps> = ({
 	onChange,
 	treeData = [],
 	api,
-	placeholder = "请选择",
+	placeholder: providedPlaceholder,
 	disabled = false,
 	width,
 	renderTrigger,
 }) => {
+	const { t } = useTranslation();
+	const placeholder = providedPlaceholder ?? t("common.select");
 	const isControlled = controlledCheckedKeys !== undefined;
 	const [internalCheckedKeys, setInternalCheckedKeys] = useState<TreeSelectorKey[]>(
 		controlledCheckedKeys ?? [],

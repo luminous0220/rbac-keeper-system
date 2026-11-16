@@ -20,6 +20,7 @@ import type {
 	ListSelectorModalRef,
 	ListSelectorModalProps,
 } from "./types";
+import { useTranslation } from "react-i18next";
 
 export type {
 	ListSelectorModalOpenProps,
@@ -36,13 +37,14 @@ const PAGE_SIZE = 20;
  */
 function ListSelectorModalInner(
 	{
-		title: defaultTitle = "选择数据",
+		title: defaultTitle,
 		width = 820,
 		api: defaultApi,
 		onConfirm,
 	}: ListSelectorModalProps,
 	ref: React.ForwardedRef<ListSelectorModalRef>,
 ) {
+	const { t } = useTranslation();
 	const [isOpen, setIsOpen] = useState(false);
 	const [searchText, setSearchText] = useState("");
 	// 已选项列表（单一状态源，跨页保留）
@@ -53,7 +55,7 @@ function ListSelectorModalInner(
 	const [total, setTotal] = useState(0);
 	const [page, setPage] = useState(1);
 	const [loading, setLoading] = useState(false);
-	const [modalTitle, setModalTitle] = useState(defaultTitle);
+	const [modalTitle, setModalTitle] = useState("");
 	const apiRef = useRef<ListSelectorApi | null>(null);
 	const debounceRef = useRef<ReturnType<typeof setTimeout>>(null);
 
@@ -168,7 +170,7 @@ function ListSelectorModalInner(
 
 	const open = useCallback(
 		(props: ListSelectorModalOpenProps) => {
-			setModalTitle(props.title ?? defaultTitle);
+			setModalTitle(props.title ?? "");
 			setSearchText("");
 
 			// 恢复已选状态：checkedKeys 是简单 key 列表
@@ -200,7 +202,7 @@ function ListSelectorModalInner(
 				fetchData(apiRef.current, 1, "");
 			}
 		},
-		[defaultTitle, fetchData],
+		[fetchData],
 	);
 
 	const close = useCallback(() => setIsOpen(false), []);
@@ -211,14 +213,14 @@ function ListSelectorModalInner(
 		<ProModal
 			open={isOpen}
 			onCancel={handleCancel}
-			title={modalTitle}
+			title={modalTitle || defaultTitle || t("selectorModal.selectData")}
 			width={width}
 			footer={null}
 			destroyOnHidden
 		>
 			<div className="flex flex-col">
 				<Input
-					placeholder="请输入关键词"
+					placeholder={t("selectorModal.search")}
 					value={searchText}
 					onChange={(e) => handleSearch(e.target.value)}
 					allowClear
@@ -234,16 +236,20 @@ function ListSelectorModalInner(
 							styles={{ body: { padding: 12, overflow: "auto", maxHeight: "400px" } }}
 							title={
 								<div className="flex justify-between items-center">
-									<span className="text-base">列表选择区域</span>
+									<span className="text-base">{t("selectorModal.listArea")}</span>
 									<Button type="link" size="small" onClick={handleSelectAll}>
-										{isAllSelected ? "取消全选" : "全选"}
+										{isAllSelected
+											? t("selectorModal.cancelSelectAll")
+											: t("selectorModal.selectAll")}
 									</Button>
 								</div>
 							}
 						>
 							<Spin spinning={loading}>
 								{data.length === 0 ? (
-									<div className="text-gray-400 text-center py-12">暂无数据</div>
+									<div className="text-gray-400 text-center py-12">
+										{t("selectorModal.noData")}
+									</div>
 								) : (
 									<div className="flex flex-col gap-1">
 										{data.map((item) => (

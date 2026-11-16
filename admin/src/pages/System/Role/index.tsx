@@ -10,23 +10,28 @@ import type { TreeNodeData } from "@/components/ModalSelector";
 import { Api, IApi } from "@/apis";
 import { usePerms } from "@/hooks";
 import dayjs from "dayjs";
+import { useTranslation } from "react-i18next";
+import i18n from "@/i18n";
 
 // 数据权限文案（与后端常量一致）
 const DATA_SCOPE_OPTIONS = [
-	{ label: "全部数据", value: 1 },
-	{ label: "自定义数据", value: 2 },
-	{ label: "本部门数据", value: 3 },
-	{ label: "本部门及以下数据", value: 4 },
-	{ label: "仅本人数据", value: 5 },
+	{ label: "role.allData", value: 1 },
+	{ label: "role.customData", value: 2 },
+	{ label: "role.departmentData", value: 3 },
+	{ label: "role.departmentAndChildrenData", value: 4 },
+	{ label: "role.ownData", value: 5 },
 ];
 const DATA_SCOPE_TEXT: Record<number, string> = Object.fromEntries(
 	DATA_SCOPE_OPTIONS.map((o) => [o.value, o.label]),
 );
 // 角色状态：0禁用 1正常
-const STATUS_TEXT: Record<number, string> = { 0: "禁用", 1: "正常" };
+const STATUS_TEXT: Record<number, string> = {
+	0: "common.disabled",
+	1: "common.enabled",
+};
 const STATUS_OPTIONS = [
-	{ label: "正常", value: 1 },
-	{ label: "禁用", value: 0 },
+	{ label: "common.enabled", value: 1 },
+	{ label: "common.disabled", value: 0 },
 ];
 
 /** 菜单树 → TreeSelector 节点数据 */
@@ -55,6 +60,7 @@ function toDeptTreeNodes(nodes: IApi.DeptRaw[]): TreeNodeData[] {
  */
 const RolePage: React.FC = () => {
 	const { message } = App.useApp();
+	const { t } = useTranslation();
 	const { hasPerm } = usePerms();
 	const tableRef = useRef<ProTableRef<IApi.RoleItem>>(null);
 	const formRef = useRef<ProFormInstance>(null);
@@ -70,10 +76,12 @@ const RolePage: React.FC = () => {
 	useEffect(() => {
 		Api.getMenuTree()
 			.then(setMenuTree)
-			.catch((err) => console.error("加载菜单树失败", err));
+			.catch((err) => console.error(i18n.t("system.menuTreeLoadFailed"), err));
 		Api.getDeptTree()
 			.then(setDeptTree)
-			.catch((err) => console.error("加载部门树失败", err));
+			.catch((err) =>
+				console.error(i18n.t("system.departmentTreeLoadFailed"), err),
+			);
 	}, []);
 
 	const menuTreeData = useMemo(() => toMenuTreeNodes(menuTree), [menuTree]);
@@ -86,61 +94,66 @@ const RolePage: React.FC = () => {
 		const fields: ProFormFields = [
 			{
 				type: "input",
-				label: "角色名称",
+				label: t("role.name"),
 				name: "roleName",
 				fieldProps: {
 					maxLength: 30,
-					placeholder: "2-30 个字符",
+					placeholder: t("role.namePlaceholder"),
 				},
 				rules: [
-					{ required: true, message: "请输入角色名称" },
-					{ min: 2, max: 30, message: "角色名称长度需为 2-30 位" },
+					{ required: true, message: t("role.nameRequired") },
+					{ min: 2, max: 30, message: t("role.nameLength") },
 				],
 			},
 			{
 				type: "input",
-				label: "角色标识",
+				label: t("role.key"),
 				name: "roleKey",
 				disabled: isEdit,
 				fieldProps: {
 					maxLength: 32,
 					placeholder: isEdit
-						? "创建后不可修改"
-						: "字母数字组合，创建后不可修改",
+						? t("role.keyImmutable")
+						: t("role.keyHint"),
 				},
 				rules: isEdit
 					? undefined
 					: [
-							{ required: true, message: "请输入角色标识" },
-							{ min: 2, max: 32, message: "角色标识长度需为 2-32 位" },
+							{ required: true, message: t("role.keyRequired") },
+							{ min: 2, max: 32, message: t("role.keyLength") },
 							{
 								pattern: /^[a-zA-Z0-9]+$/,
-								message: "角色标识只能包含字母和数字",
+								message: t("role.keyChars"),
 							},
 						],
 			},
 			{
 				type: "input-number",
-				label: "显示顺序",
+				label: t("system.displayOrder"),
 				name: "roleSort",
 				fieldProps: { min: 0, style: { width: "100%" } },
 			},
 			{
 				type: "radio",
-				label: "数据权限",
+				label: t("role.dataScope"),
 				name: "dataScope",
 				formItemProps: { className: "col-span-3" },
-				fieldProps: { options: DATA_SCOPE_OPTIONS },
-				rules: [{ required: true, message: "请选择数据权限" }],
+				fieldProps: {
+					options: DATA_SCOPE_OPTIONS.map((item) => ({
+						...item,
+						label: t(item.label),
+					})),
+				},
+				rules: [{ required: true, message: t("role.dataScopeRequired") }],
 			},
 			// 菜单权限：自定义渲染 TreeSelector（受控：checkedKeys/onChange 直接使用 id 数组）
 			{
-				label: "菜单权限",
+				label: t("role.menuPermission"),
 				name: "menuIds",
 				formItemProps: { className: "col-span-3" },
 				render: (value, form) => (
 					<TreeSelector
-						title="选择菜单权限"
+						title={t("role.selectMenuPermission")}
 						treeData={menuTreeData}
 						checkedKeys={(value as number[] | undefined) ?? []}
 						onChange={(keys) => {
@@ -149,19 +162,19 @@ const RolePage: React.FC = () => {
 								keys.map((k) => Number(k)),
 							);
 						}}
-						placeholder="请选择菜单权限"
+						placeholder={t("role.selectMenuPermissionHint")}
 						width={820}
 					/>
 				),
 			},
 			// 自定义数据权限：仅 dataScope=2 时显示（StandardField 已支持自定义字段的 visible 函数）
 			{
-				label: "自定义数据权限部门",
+				label: t("role.customDepartmentPermission"),
 				name: "deptIds",
 				formItemProps: { className: "col-span-3" },
 				visible: (values) => values.dataScope === 2,
 				rules: [
-					{ required: true, message: "请选择数据权限部门" },
+					{ required: true, message: t("role.selectDataScopeDepartments") },
 					{
 						validator: (_rule: unknown, value: unknown) => {
 							const v = value as number[] | undefined;
@@ -186,7 +199,7 @@ const RolePage: React.FC = () => {
 				// 		: [],
 				render: (value, form) => (
 					<TreeSelector
-						title="选择自定义数据权限部门"
+						title={t("role.selectCustomDepartments")}
 						treeData={deptTreeData}
 						checkedKeys={(value as number[] | undefined) ?? []}
 						onChange={(keys) => {
@@ -195,20 +208,20 @@ const RolePage: React.FC = () => {
 								keys.map((k) => Number(k)),
 							);
 						}}
-						placeholder="请选择部门"
+						placeholder={t("role.selectDepartment")}
 						width={820}
 					/>
 				),
 			},
 			{
 				type: "textarea",
-				label: "备注",
+				label: t("system.note"),
 				name: "remark",
 				formItemProps: { className: "col-span-3" },
 				fieldProps: {
 					maxLength: 500,
 					rows: 3,
-					placeholder: "请输入备注（选填）",
+					placeholder: t("department.remarkPlaceholder"),
 				},
 			},
 		];
@@ -217,30 +230,35 @@ const RolePage: React.FC = () => {
 		if (isEdit) {
 			fields.splice(5, 0, {
 				type: "radio",
-				label: "状态",
+				label: t("system.status"),
 				name: "status",
-				fieldProps: { options: STATUS_OPTIONS },
-				rules: [{ required: true, message: "请选择状态" }],
+				fieldProps: {
+					options: STATUS_OPTIONS.map((item) => ({
+						...item,
+						label: t(item.label),
+					})),
+				},
+				rules: [{ required: true, message: t("department.statusRequired") }],
 			});
 		}
 
 		return fields;
-	}, [formMode.type, menuTreeData, deptTreeData]);
+	}, [formMode.type, menuTreeData, deptTreeData, t]);
 
 	// 打开新增
 	const openAdd = useCallback(() => {
 		setFormMode({ type: "add" });
 		formRef.current?.open({
-			title: "新增角色",
+			title: t("role.add"),
 			initialValues: { roleSort: 0, dataScope: 1 },
 		});
-	}, []);
+	}, [t]);
 
 	// 打开编辑
 	const openEdit = useCallback((record: IApi.RoleItem) => {
 		setFormMode({ type: "edit", record });
 		formRef.current?.open({
-			title: `编辑角色：${record.role_name}`,
+			title: `${t("role.edit")}: ${record.role_name}`,
 			initialValues: {
 				roleName: record.role_name,
 				roleKey: record.role_key,
@@ -253,7 +271,7 @@ const RolePage: React.FC = () => {
 			},
 			extraParams: { roleKey: record.role_key },
 		});
-	}, []);
+	}, [t]);
 
 	// 统一提交
 	const handleFormSubmit = useCallback(
@@ -275,65 +293,65 @@ const RolePage: React.FC = () => {
 					...payload,
 					roleKey: values.roleKey,
 				});
-				message.success("新增角色成功");
+				message.success(t("role.addSuccess"));
 			} else {
 				const roleKey = extraParams?.roleKey as string;
 				await Api.editRole(roleKey, {
 					...payload,
 					status: values.status,
 				});
-				message.success("修改角色成功");
+				message.success(t("role.editSuccess"));
 			}
 			tableRef.current?.refresh();
 		},
-		[formMode.type, message],
+		[formMode.type, message, t],
 	);
 
 	// ---- 删除角色 ----
 	const handleRoleDelete = useCallback(
 		async (record: IApi.RoleItem) => {
 			await Api.deleteRole(record.role_key);
-			message.success("删除角色成功");
+			message.success(t("role.deleteSuccess"));
 			tableRef.current?.refresh();
 		},
-		[message],
+		[message, t],
 	);
 
 	// ---- 列配置 ----
 	const columns: ProTableColumnType<IApi.RoleItem>[] = [
-		{ title: "角色名称", dataIndex: "role_name", width: 140 },
-		{ title: "角色标识", dataIndex: "role_key", width: 120 },
+		{ title: t("role.name"), dataIndex: "role_name", width: 140 },
+		{ title: t("role.key"), dataIndex: "role_key", width: 120 },
 		{
-			title: "数据权限",
+			title: t("role.dataScope"),
 			dataIndex: "data_scope",
 			width: 140,
-			render: (value) => DATA_SCOPE_TEXT[(value as number) ?? 1] ?? "-",
+			render: (value) => t(DATA_SCOPE_TEXT[(value as number) ?? 1] ?? "-"),
 		},
 		{
-			title: "菜单授权",
+			title: t("role.menuAuthorization"),
 			dataIndex: "menus",
 			width: 100,
 			render: (_, record) => record.menus?.length ?? 0,
 		},
 		{
-			title: "状态",
+			title: t("system.status"),
 			dataIndex: "status",
 			width: 80,
 			render: (value) => (
 				<Tag color={(value as number) === 1 ? "green" : "red"}>
-					{STATUS_TEXT[(value as number) ?? 0] ?? "-"}
+					{t(STATUS_TEXT[(value as number) ?? 0] ?? "-")}
 				</Tag>
 			),
 		},
-		{ title: "备注", dataIndex: "remark", ellipsis: true },
+		{ title: t("system.note"), dataIndex: "remark", ellipsis: true },
 		{
-			title: "创建时间",
+			title: t("system.createdAt"),
 			dataIndex: "createdAt",
 			width: 170,
 			render: (time) => dayjs(time).format("YYYY-MM-DD HH:mm:ss"),
 		},
 		{
-			title: "操作",
+			title: t("system.action"),
 			key: "action",
 			width: 180,
 			fixed: "right",
@@ -347,15 +365,15 @@ const RolePage: React.FC = () => {
 							icon={<EditOutlined />}
 							onClick={() => openEdit(record)}
 						>
-							编辑
+							{t("system.edit")}
 						</Button>
 					)}
 					{hasPerm("system:role:remove") && record.role_key !== "super" && (
 						<Popconfirm
-							title="确定删除该角色吗？"
-							description="若角色已分配给用户将被拦截"
-							okText="删除"
-							cancelText="取消"
+							title={t("role.deleteConfirm")}
+							description={t("role.deleteBlocked")}
+							okText={t("system.delete")}
+							cancelText={t("common.cancel")}
 							okButtonProps={{ danger: true }}
 							onConfirm={() => handleRoleDelete(record)}
 						>
@@ -365,7 +383,7 @@ const RolePage: React.FC = () => {
 								variant="filled"
 								icon={<DeleteOutlined />}
 							>
-								删除
+								{t("system.delete")}
 							</Button>
 						</Popconfirm>
 					)}
@@ -384,23 +402,29 @@ const RolePage: React.FC = () => {
 					return { data: list };
 				}}
 				columns={columns}
-				title="角色管理"
+				title={t("role.title")}
 				toolbarExtra={
 					hasPerm("system:role:add") ? (
 						<Button type="primary" icon={<PlusOutlined />} onClick={openAdd}>
-							新增角色
+							{t("role.add")}
 						</Button>
 					) : undefined
 				}
 				search={{
 					fields: [
-						{ type: "input", label: "角色名称", name: "roleName" },
-						{ type: "input", label: "角色标识", name: "roleKey" },
+						{ type: "input", label: t("role.name"), name: "roleName" },
+						{ type: "input", label: t("role.key"), name: "roleKey" },
 						{
 							type: "select",
-							label: "状态",
+							label: t("system.status"),
 							name: "status",
-							fieldProps: { options: STATUS_OPTIONS, allowClear: true },
+							fieldProps: {
+								options: STATUS_OPTIONS.map((item) => ({
+									...item,
+									label: t(item.label),
+								})),
+								allowClear: true,
+							},
 						},
 					],
 				}}

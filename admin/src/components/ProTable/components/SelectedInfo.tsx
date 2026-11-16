@@ -1,6 +1,7 @@
 import { memo } from "react";
 import type { ReactNode } from "react";
 import { Alert, Button, Space } from "antd";
+import { useTranslation } from "react-i18next";
 
 export const SelectedInfo = memo(function SelectedInfo({
 	selectedCount,
@@ -12,6 +13,7 @@ export const SelectedInfo = memo(function SelectedInfo({
 	/** 批量操作按钮（如批量删除），由 ProTable 经 selectedActions 渲染后注入 */
 	actions?: ReactNode;
 }) {
+	const { t } = useTranslation();
 	if (selectedCount === 0) return null;
 
 	return (
@@ -19,12 +21,12 @@ export const SelectedInfo = memo(function SelectedInfo({
 			<Alert
 				type="info"
 				showIcon
-				title={`已选择 ${selectedCount} 条`}
+				title={t("table.selectedCount", { count: selectedCount })}
 				action={
 					<Space size={8} wrap>
 						{actions}
 						<Button  onClick={onClear}>
-							取消选择
+							{t("table.cancelSelection")}
 						</Button>
 					</Space>
 				}

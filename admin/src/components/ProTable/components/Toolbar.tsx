@@ -9,6 +9,7 @@ import {
 import type { MenuProps } from "antd";
 import type { ProTableDensity, ProTableToolbarProps } from "../types.d";
 import { TableDragSort } from "./TableDragSort";
+import { useTranslation } from "react-i18next";
 
 export const Toolbar = memo(function Toolbar({
 	title,
@@ -24,10 +25,11 @@ export const Toolbar = memo(function Toolbar({
 	onExport,
 	selectedCount,
 }: ProTableToolbarProps) {
+	const { t } = useTranslation();
 	const densityItems: MenuProps["items"] = [
-		{ key: "small", label: "紧凑" },
-		{ key: "middle", label: "默认" },
-		{ key: "large", label: "宽松" },
+		{ key: "small", label: t("table.densityCompact") },
+		{ key: "middle", label: t("table.densityDefault") },
+		{ key: "large", label: t("table.densityComfortable") },
 	];
 
 	return (
@@ -53,7 +55,9 @@ export const Toolbar = memo(function Toolbar({
 						onClick={onExport}
 						size="middle"
 					>
-						{selectedCount ? `导出(${selectedCount})` : "导出"}
+						{selectedCount
+							? t("table.exportSelected", { count: selectedCount })
+							: t("table.export")}
 					</Button>
 				)}
 				<Button
@@ -78,7 +82,7 @@ export const Toolbar = memo(function Toolbar({
 					content={
 						<div className="max-w-64 mt-[-8px]">
 							<Typography.Text type="secondary" className="text-xs">
-								【拖拽/隐藏/固定列】
+								{t("table.columnHints")}
 							</Typography.Text>
 							<TableDragSort
 								columns={columns}
@@ -87,7 +91,7 @@ export const Toolbar = memo(function Toolbar({
 							/>
 						</div>
 					}
-					title="列设置"
+					title={t("table.columnSettings")}
 					trigger="click"
 					placement="bottomRight"
 				>

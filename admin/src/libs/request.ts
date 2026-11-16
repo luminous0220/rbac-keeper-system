@@ -8,6 +8,7 @@ import axios, {
 
 import { getToken, getRefreshToken, setToken, clearAuthToken } from "@/libs";
 import { useAuthStore } from "@/stores";
+import i18n from "@/i18n";
 
 import { CFG, HTTP_STATUS, BUSINESS_CODE } from "@/constants";
 
@@ -159,7 +160,7 @@ class RequestHttp {
 				) {
 					// 已用新 token 重试过仍失败：不再续期，直接登出
 					if ((interRes.config as IConfig & { _retried?: boolean })._retried) {
-						handleAuthFailed(msg || "登录失效，请重新登录");
+						handleAuthFailed(msg || i18n.t("request.authFailed"));
 						return Promise.reject(data);
 					}
 
@@ -174,13 +175,13 @@ class RequestHttp {
 						return this.requestServer(retryConfig);
 					}
 					// 续期失败（refresh token 缺失/过期）：清凭证并回登录页
-					handleAuthFailed(msg || "登录已过期，请重新登录");
+					handleAuthFailed(msg || i18n.t("request.authExpired"));
 					return Promise.reject(data);
 				}
 
 				// 其他业务错误：默认弹出后端 msg，noErrorMessage 可静默
 				if (!config.noErrorMessage) {
-					window.$message.error(msg || "请求失败");
+					window.$message.error(msg || i18n.t("request.failed"));
 				}
 				console.error(interRes);
 				return Promise.reject(data);
@@ -191,17 +192,17 @@ class RequestHttp {
 
 				// 网络异常
 				if (!window.navigator.onLine) {
-					window.$message.error("网络请求超时，请您重试");
+					window.$message.error(i18n.t("request.networkTimeout"));
 					return Promise.reject(response);
 				}
 
 				// HTTP 401：未认证/登录过期（少见，业务错误走 body code）
 				if (status === HTTP_STATUS.UNAUTHORIZED) {
-					handleAuthFailed("登录失效，请重新登录");
+					handleAuthFailed(i18n.t("request.authFailed"));
 					return Promise.reject(response);
 				}
 
-				window.$message.error("请求错误，请联系系统管理员");
+				window.$message.error(i18n.t("request.requestError"));
 				return Promise.reject(error);
 			},
 		);

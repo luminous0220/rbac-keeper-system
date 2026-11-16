@@ -24,14 +24,10 @@ import { IconSun, IconMoon } from "@tabler/icons-react";
 import { useThemeStore, PRESET_COLORS, PresetColorKey } from "@/stores/theme";
 import { ProForm, FormFieldItem, ProFormInstance } from "@/components/ProForm";
 import { fullLoading } from "@/hooks";
+import { useTranslation } from "react-i18next";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 const { useToken } = theme;
-
-const tags = [
-	{ icon: ShakeOutlined, label: "安全可靠" },
-	{ icon: UserOutlined, label: "高效便捷" },
-	{ icon: PieChartOutlined, label: "现代设计" },
-];
 
 // 记住密码存储的键
 const REMEMBER_KEY = CFG.REMEMBER_KEY;
@@ -42,6 +38,12 @@ export default function Login() {
 	const formRef = useRef<ProFormInstance>(null);
 	const navigate = useNavigate();
 	const [remember, setRemember] = useState(false);
+	const { t } = useTranslation();
+	const tags = [
+		{ icon: ShakeOutlined, label: t("login.secure") },
+		{ icon: UserOutlined, label: t("login.efficient") },
+		{ icon: PieChartOutlined, label: t("login.modern") },
+	];
 
 	// 验证码相关状态
 	const [captchaId, setCaptchaId] = useState("");
@@ -56,9 +58,9 @@ export default function Login() {
 			setCaptchaImg(res.img);
 		} catch (error) {
 			// 获取失败不阻塞页面，仅打印日志
-			console.error("获取验证码失败", error);
+			console.error(t("login.captchaFetchFailed"), error);
 		}
-	}, []);
+	}, [t]);
 
 	// 防抖刷新验证码：快速连点 / 多次失败时合并为一次请求
 	const refreshCaptcha = useCallback(() => {
@@ -101,7 +103,7 @@ export default function Login() {
 			// 存储双令牌：Access 用于请求鉴权，Refresh 用于过期静默续期
 			setToken(data.accessToken);
 			setRefreshToken(data.refreshToken);
-			window.$message.success("登录成功");
+			window.$message.success(t("login.success"));
 			navigate(CFG.HOME_PATH);
 			fullLoading(false);
 		},
@@ -140,7 +142,7 @@ export default function Login() {
 				captchaValue: values?.captchaValue,
 			});
 		} catch (error) {
-			console.error("表单验证失败", error);
+			console.error(t("login.validationFailed"), error);
 			fullLoading(false);
 		}
 	};
@@ -149,44 +151,50 @@ export default function Login() {
 	const formItems: FormFieldItem[] = [
 		{
 			name: "username",
-			label: "账号",
+			label: t("login.account"),
 			type: "input",
 			rules: ["required"],
-			formItemProps: { rules: [{ required: true, message: "请输入用户名" }] },
+			formItemProps: {
+				rules: [{ required: true, message: t("login.usernameRequired") }],
+			},
 			fieldProps: {
 				prefix: (
 					<span className="flex items-center text-base p-2 bg-[#EBF7FF] rounded-lg text-[var(--p)] dark:bg-[#070D10]">
 						<UserOutlined />
 					</span>
 				),
-				placeholder: "请输入用户名",
+				placeholder: t("login.usernameRequired"),
 				onPressEnter: handleSubmit,
 			},
 		},
 		{
 			name: "password",
-			label: "密码",
+			label: t("login.password"),
 			type: "input-password",
-			formItemProps: { rules: [{ required: true, message: "请输入密码" }] },
+			formItemProps: {
+				rules: [{ required: true, message: t("login.passwordRequired") }],
+			},
 			fieldProps: {
 				prefix: (
 					<span className="flex items-center text-base p-2 bg-[#EBF7FF] rounded-lg text-[var(--p)] dark:bg-[#070D10]">
 						<LockOutlined />
 					</span>
 				),
-				placeholder: "请输入密码",
+				placeholder: t("login.passwordRequired"),
 				onPressEnter: handleSubmit,
 			},
 		},
 		{
 			name: "captchaValue",
-			label: "验证码",
-			formItemProps: { rules: [{ required: true, message: "请输入验证码" }] },
+			label: t("login.captcha"),
+			formItemProps: {
+				rules: [{ required: true, message: t("login.captchaRequired") }],
+			},
 			// 自定义渲染：输入框 + 可点击刷新的验证码图片
 			render: (value, form) => (
 				<div className="flex gap-2">
 					<Input
-						placeholder="请输入验证码"
+						placeholder={t("login.captchaRequired")}
 						maxLength={4}
 						prefix={
 							<span className="flex items-center text-base p-2 bg-[#EBF7FF] rounded-lg text-[var(--p)] dark:bg-[#070D10]">
@@ -199,8 +207,8 @@ export default function Login() {
 					/>
 					<img
 						src={captchaImg}
-						alt="验证码"
-						title="点击刷新验证码"
+						alt={t("login.captcha")}
+						title={t("login.refreshCaptcha")}
 						onClick={refreshCaptcha}
 						className="h-10 w-[120px] shrink-0 cursor-pointer rounded border border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800"
 					/>
@@ -251,6 +259,7 @@ export default function Login() {
 
 				{/* 右上角主题切换 */}
 				<div className="absolute z-[999] top-4 right-4 flex items-center gap-2">
+					<LanguageSwitcher />
 					{/* 预设颜色选择 */}
 					<div className="flex gap-1">
 						{(Object.keys(PRESET_COLORS) as PresetColorKey[]).map(
@@ -297,10 +306,10 @@ export default function Login() {
 							</div>
 
 							<h1 className="mt-10 text-[26px] font-bold leading-tight text-white">
-								欢迎登录管理平台
+								{t("login.welcome")}
 							</h1>
 							<p className="mt-3 text-sm text-[#CDDCF7]">
-								或许我们只是差点运气
+								{t("login.motto")}
 							</p>
 
 							{/* 标签 */}
@@ -327,7 +336,7 @@ export default function Login() {
 						<button
 							onClick={handleThemeChange}
 							className="absolute top-2 right-2 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-							title={isDark ? "切换到亮色模式" : "切换到暗色模式"}
+							title={isDark ? t("login.lightMode") : t("login.darkMode")}
 						>
 							{isDark ? (
 								<IconSun
@@ -364,7 +373,7 @@ export default function Login() {
 									checked={remember}
 									onChange={(e) => setRemember(e.target.checked)}
 								>
-									记住密码
+									{t("login.rememberPassword")}
 								</Checkbox>
 							</Form.Item>
 							<Button
@@ -375,7 +384,7 @@ export default function Login() {
 								loading={loginMutation.isPending}
 								onClick={handleSubmit}
 							>
-								登录
+								{t("login.login")}
 							</Button>
 						</div>
 					</div>
@@ -383,7 +392,7 @@ export default function Login() {
 
 				{/* 备案号 */}
 				<footer className="mt-8 text-center text-xs text-[#94a3b8]">
-					Copyright © 2024 LM-ADMIN · ICP备88888888号-1
+					{t("login.copyright")}
 				</footer>
 			</div>
 		</ConfigProvider>

@@ -8,12 +8,16 @@ import { usePerms } from "@/hooks";
 import { downloadBlob } from "@/libs";
 import { toDateTime } from "@/libs/date";
 import dayjs from "dayjs";
+import { useTranslation } from "react-i18next";
 
 // 登录状态：0成功 1失败（dto.LoginLogItem.Status）
-const STATUS_TEXT: Record<number, string> = { 0: "成功", 1: "失败" };
+const STATUS_TEXT: Record<number, string> = {
+	0: "logs.success",
+	1: "logs.failed",
+};
 const STATUS_OPTIONS = [
-	{ label: "成功", value: 0 },
-	{ label: "失败", value: 1 },
+	{ label: "logs.success", value: 0 },
+	{ label: "logs.failed", value: 1 },
 ];
 
 /**
@@ -26,6 +30,7 @@ const STATUS_OPTIONS = [
  */
 const LoginLogPage: React.FC = () => {
 	const { message, modal } = App.useApp();
+	const { t } = useTranslation();
 	const { hasPerm } = usePerms();
 	const tableRef = useRef<ProTableRef<IApi.LoginLogItem>>(null);
 	// 最近一次已查询的筛选参数（导出复用：导出的即当前表格所查）
@@ -52,7 +57,7 @@ const LoginLogPage: React.FC = () => {
 		try {
 			const blob = await Api.exportLoginLogs({ ...lastQueryRef.current });
 			downloadBlob(blob, "login_logs.csv");
-			message.success("导出成功");
+			message.success(t("logs.exportSuccess"));
 		} catch {
 			/* noop */
 		}
@@ -60,14 +65,14 @@ const LoginLogPage: React.FC = () => {
 
 	const confirmClear = () => {
 		modal.confirm({
-			title: "清空登录日志",
-			content: "确定清空全部登录日志吗？该操作不可恢复。",
-			okText: "清空",
+			title: t("logs.clearLogin"),
+			content: t("logs.clearLoginConfirm"),
+			okText: t("logs.clear"),
 			okButtonProps: { danger: true },
 			onOk: async () => {
 				try {
 					await Api.clearLoginLogs();
-					message.success("登录日志已清空");
+					message.success(t("logs.loginCleared"));
 					tableRef.current?.refresh();
 				} catch {
 					/* noop */
@@ -77,9 +82,9 @@ const LoginLogPage: React.FC = () => {
 	};
 
 	const columns: ProTableColumnType<IApi.LoginLogItem>[] = [
-		{ title: "用户名", dataIndex: "username", width: 130 },
+		{ title: t("logs.username"), dataIndex: "username", width: 130 },
 		{
-			title: "登录 IP",
+			title: t("logs.ip"),
 			dataIndex: "ip",
 			width: 140,
 			render: (value) => (
@@ -87,45 +92,45 @@ const LoginLogPage: React.FC = () => {
 			),
 		},
 		{
-			title: "归属地",
+			title: t("logs.location"),
 			dataIndex: "ipAddr",
 			width: 150,
 			ellipsis: true,
 			render: (v) => v || "-",
 		},
 		{
-			title: "浏览器",
+			title: t("logs.browser"),
 			dataIndex: "browser",
 			width: 160,
 			ellipsis: true,
 			render: (v) => v || "-",
 		},
 		{
-			title: "操作系统",
+			title: t("logs.os"),
 			dataIndex: "os",
 			width: 120,
 			ellipsis: true,
 			render: (v) => v || "-",
 		},
 		{
-			title: "状态",
+			title: t("logs.status"),
 			dataIndex: "status",
 			width: 80,
 			render: (value) => (
 				<Tag color={(value as number) === 0 ? "green" : "red"}>
-					{STATUS_TEXT[(value as number) ?? 0] ?? "-"}
+					{t(STATUS_TEXT[(value as number) ?? 0] ?? "-")}
 				</Tag>
 			),
 		},
 		{
-			title: "提示消息",
+			title: t("logs.message"),
 			dataIndex: "msg",
 			width: 220,
 			ellipsis: true,
 			render: (v) => v || "-",
 		},
 		{
-			title: "登录时间",
+			title: t("logs.loginTime"),
 			dataIndex: "loginTime",
 			width: 180,
 			render: (time) => dayjs(time).format("YYYY-MM-DD HH:mm:ss"),
@@ -138,49 +143,55 @@ const LoginLogPage: React.FC = () => {
 			rowKey="id"
 			api={loginLogApi}
 			columns={columns}
-			title="登录日志"
+			title={t("logs.loginTitle")}
 			toolbarExtra={
 				<>
 					{hasPerm("monitor:log:login:export") && (
 						<Button icon={<DownloadOutlined />} onClick={handleExport}>
-							导出
+							{t("table.export")}
 						</Button>
 					)}
 					{hasPerm("monitor:log:login:clear") && (
 						<Button danger icon={<DeleteOutlined />} onClick={confirmClear}>
-							清空
+							{t("logs.clear")}
 						</Button>
 					)}
 				</>
 			}
 			search={{
 				fields: [
-					{ type: "input", label: "用户名", name: "username" },
-					{ type: "input", label: "登录 IP", name: "ip" },
+					{ type: "input", label: t("logs.username"), name: "username" },
+					{ type: "input", label: t("logs.ip"), name: "ip" },
 					{
 						type: "select",
-						label: "状态",
+						label: t("logs.status"),
 						name: "status",
-						fieldProps: { options: STATUS_OPTIONS, allowClear: true },
-					},
-					{
-						type: "date-picker",
-						label: "开始时间",
-						name: "startTime",
 						fieldProps: {
-							showTime: true,
-							style: { width: "100%" },
-							placeholder: "开始时间",
+							options: STATUS_OPTIONS.map((item) => ({
+								...item,
+								label: t(item.label),
+							})),
+							allowClear: true,
 						},
 					},
 					{
 						type: "date-picker",
-						label: "结束时间",
+						label: t("logs.startTime"),
+						name: "startTime",
+						fieldProps: {
+							showTime: true,
+							style: { width: "100%" },
+							placeholder: t("logs.startTime"),
+						},
+					},
+					{
+						type: "date-picker",
+						label: t("logs.endTime"),
 						name: "endTime",
 						fieldProps: {
 							showTime: true,
 							style: { width: "100%" },
-							placeholder: "结束时间",
+							placeholder: t("logs.endTime"),
 						},
 					},
 				],

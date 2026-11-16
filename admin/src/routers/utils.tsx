@@ -2,18 +2,22 @@ import { lazy, Suspense } from "react";
 import { RouteObject } from "react-router";
 import { Spin } from "antd";
 import { IApi } from "@/apis";
+import { useTranslation } from "react-i18next";
 
 // 空页面组件（未配置组件路径的占位）
-const EmptyPage = () => (
-	<div className="min-h-full flex items-center justify-center">
-		<div className="text-center">
-			<h1 className="text-2xl font-bold text-gray-800 dark:text-white mb-4">
-				页面开发中
-			</h1>
-			<p className="text-gray-500 dark:text-gray-400">敬请期待...</p>
+const EmptyPage = () => {
+	const { t } = useTranslation();
+	return (
+		<div className="min-h-full flex items-center justify-center">
+			<div className="text-center">
+				<h1 className="text-2xl font-bold text-gray-800 dark:text-white mb-4">
+					{t("routes.pageInDevelopment")}
+				</h1>
+				<p className="text-gray-500 dark:text-gray-400">{t("routes.stayTuned")}</p>
+			</div>
 		</div>
-	</div>
-);
+	);
+};
 
 // 懒加载组件包装器（带 fallback，保证过渡动画可见）
 const LazyWrapper = (

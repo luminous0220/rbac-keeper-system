@@ -8,12 +8,16 @@ import type { ProFormFields, ProFormInstance } from "@/components/ProForm";
 import { Api, IApi } from "@/apis";
 import { usePerms } from "@/hooks";
 import dayjs from "dayjs";
+import { useTranslation } from "react-i18next";
 
 // 部门状态与用户/角色相反：0=正常 1=停用（model.Dept）
-const STATUS_TEXT: Record<number, string> = { 1: "正常", 0: "停用" };
+const STATUS_TEXT: Record<number, string> = {
+	1: "common.enabled",
+	0: "common.disabled",
+};
 const STATUS_OPTIONS = [
-	{ label: "正常", value: 1 },
-	{ label: "停用", value: 0 },
+	{ label: "common.enabled", value: 1 },
+	{ label: "common.disabled", value: 0 },
 ];
 
 /** 部门树 → antd TreeSelect 数据结构（上级部门选择） */
@@ -34,6 +38,7 @@ function toTreeSelect(nodes: IApi.DeptRaw[]): any[] {
  */
 const DeptPage: React.FC = () => {
 	const { message } = App.useApp();
+	const { t } = useTranslation();
 	const { hasPerm } = usePerms();
 	const tableRef = useRef<ProTableRef<IApi.DeptRaw>>(null);
 	const formRef = useRef<ProFormInstance>(null);
@@ -63,61 +68,61 @@ const DeptPage: React.FC = () => {
 		const fields: ProFormFields = [
 			{
 				type: "tree-select",
-				label: "上级部门",
+				label: t("department.parent"),
 				name: "parentId",
 				fieldProps: {
 					treeData: deptTreeData,
 					allowClear: true,
 					showSearch: true,
 					treeDefaultExpandAll: true,
-					placeholder: "不选择则为顶级部门",
+					placeholder: t("department.rootHint"),
 				},
 			},
 			{
 				type: "input",
-				label: "部门名称",
+				label: t("department.name"),
 				name: "deptName",
-				fieldProps: { maxLength: 30, placeholder: "2-30 个字符" },
+				fieldProps: { maxLength: 30, placeholder: t("department.namePlaceholder") },
 				rules: [
-					{ required: true, message: "请输入部门名称" },
-					{ min: 2, max: 30, message: "部门名称长度需为 2-30 位" },
+					{ required: true, message: t("department.nameRequired") },
+					{ min: 2, max: 30, message: t("department.nameLength") },
 				],
 			},
 			{
 				type: "input-number",
-				label: "显示顺序",
+				label: t("department.order"),
 				name: "orderNum",
 				fieldProps: { min: 0, style: { width: "100%" } },
 			},
 			{
 				type: "input",
-				label: "负责人",
+				label: t("department.leader"),
 				name: "leader",
 				fieldProps: { maxLength: 20 },
-				rules: [{ max: 20, message: "负责人长度不能超过 20 位" }],
+				rules: [{ max: 20, message: t("department.leaderLength") }],
 			},
 			{
 				type: "input",
-				label: "联系电话",
+				label: t("system.phone"),
 				name: "phone",
-				fieldProps: { maxLength: 11, placeholder: "手机号或分机号" },
-				rules: [{ max: 11, message: "联系电话长度不能超过 11 位" }],
+				fieldProps: { maxLength: 11, placeholder: t("department.phonePlaceholder") },
+				rules: [{ max: 11, message: t("department.phoneLength") }],
 			},
 			{
 				type: "input",
-				label: "邮箱",
+				label: t("system.email"),
 				name: "email",
 				fieldProps: { maxLength: 50 },
-				rules: [{ type: "email", message: "请输入正确的邮箱" }],
+				rules: [{ type: "email", message: t("validation.emailInvalid") }],
 			},
 			{
 				type: "textarea",
-				label: "备注",
+				label: t("system.note"),
 				name: "remark",
 				fieldProps: {
 					maxLength: 500,
 					rows: 3,
-					placeholder: "请输入备注（选填）",
+					placeholder: t("department.remarkPlaceholder"),
 				},
 			},
 		];
@@ -125,32 +130,39 @@ const DeptPage: React.FC = () => {
 		if (isEdit) {
 			fields.push({
 				type: "radio",
-				label: "状态",
+				label: t("system.status"),
 				name: "status",
-				fieldProps: { options: STATUS_OPTIONS },
-				rules: [{ required: true, message: "请选择状态" }],
+				fieldProps: {
+					options: STATUS_OPTIONS.map((item) => ({
+						...item,
+						label: t(item.label),
+					})),
+				},
+				rules: [{ required: true, message: t("department.statusRequired") }],
 			});
 		}
 		return fields;
-	}, [formMode.type, deptTreeData]);
+	}, [formMode.type, deptTreeData, t]);
 
 	// 打开新增：可在 action 列传入父部门以预选 parentId
 	const openAdd = useCallback((parent?: IApi.DeptRaw) => {
 		setFormMode({ type: "add" });
 		formRef.current?.open({
-			title: parent ? `新增子部门：${parent.dept_name}` : "新增部门",
+			title: parent
+				? `${t("department.addChild")}: ${parent.dept_name}`
+				: t("department.add"),
 			initialValues: {
 				parentId: parent?.id,
 				orderNum: 0,
 			},
 		});
-	}, []);
+	}, [t]);
 
 	// 打开编辑
 	const openEdit = useCallback((record: IApi.DeptRaw) => {
 		setFormMode({ type: "edit", record });
 		formRef.current?.open({
-			title: `编辑部门：${record.dept_name}`,
+			title: `${t("department.edit")}: ${record.dept_name}`,
 			// 根部门 parent_id=0 置 undefined，展示占位「不选择则为顶级部门」
 			initialValues: {
 				parentId: record.parent_id || undefined,
@@ -164,7 +176,7 @@ const DeptPage: React.FC = () => {
 			},
 			extraParams: { id: record.id },
 		});
-	}, []);
+	}, [t]);
 
 	// 统一提交：根据 formMode 走新增或编辑
 	const handleFormSubmit = useCallback(
@@ -183,7 +195,7 @@ const DeptPage: React.FC = () => {
 					email: values.email ?? "",
 					remark: values.remark ?? "",
 				});
-				message.success("新增部门成功");
+				message.success(t("department.addSuccess"));
 			} else {
 				const id = extraParams?.id as number;
 				await Api.editDept(id, {
@@ -196,48 +208,48 @@ const DeptPage: React.FC = () => {
 					status: values.status,
 					remark: values.remark ?? "",
 				});
-				message.success("修改部门成功");
+				message.success(t("department.editSuccess"));
 			}
 			tableRef.current?.refresh();
 		},
-		[formMode.type, message],
+		[formMode.type, message, t],
 	);
 
 	// ---- 删除部门 ----
 	const handleDelete = useCallback(
 		async (record: IApi.DeptRaw) => {
 			await Api.deleteDept(record.id);
-			message.success("删除部门成功");
+			message.success(t("department.deleteSuccess"));
 			tableRef.current?.refresh();
 		},
-		[message],
+		[message, t],
 	);
 
 	// ---- 列配置 ----
 	const columns: ProTableColumnType<IApi.DeptRaw>[] = [
-		{ title: "部门名称", dataIndex: "dept_name", width: 220 },
-		{ title: "显示顺序", dataIndex: "order_num", width: 90 },
-		{ title: "负责人", dataIndex: "leader", width: 100 },
-		{ title: "联系电话", dataIndex: "phone", width: 130 },
-		{ title: "邮箱", dataIndex: "email", width: 180, ellipsis: true },
+		{ title: t("department.name"), dataIndex: "dept_name", width: 220 },
+		{ title: t("system.displayOrder"), dataIndex: "order_num", width: 90 },
+		{ title: t("department.leader"), dataIndex: "leader", width: 100 },
+		{ title: t("system.phone"), dataIndex: "phone", width: 130 },
+		{ title: t("system.email"), dataIndex: "email", width: 180, ellipsis: true },
 		{
-			title: "状态",
+			title: t("system.status"),
 			dataIndex: "status",
 			width: 80,
 			render: (value) => (
 				<Tag color={(value as number) === 1 ? "green" : "red"}>
-					{STATUS_TEXT[(value as number) ?? 0] ?? "-"}
+					{t(STATUS_TEXT[(value as number) ?? 0] ?? "-")}
 				</Tag>
 			),
 		},
 		{
-			title: "创建时间",
+			title: t("system.createdAt"),
 			dataIndex: "createdAt",
 			width: 170,
 			render: (time) => dayjs(time).format("YYYY-MM-DD HH:mm:ss"),
 		},
 		{
-			title: "操作",
+			title: t("system.action"),
 			key: "action",
 			width: 240,
 			fixed: "right",
@@ -251,7 +263,7 @@ const DeptPage: React.FC = () => {
 							icon={<PlusOutlined />}
 							onClick={() => openAdd(record)}
 						>
-							新增子部门
+							{t("department.addChild")}
 						</Button>
 					)}
 					{hasPerm("system:dept:edit") && (
@@ -262,15 +274,15 @@ const DeptPage: React.FC = () => {
 							icon={<EditOutlined />}
 							onClick={() => openEdit(record)}
 						>
-							编辑
+							{t("system.edit")}
 						</Button>
 					)}
 					{hasPerm("system:dept:remove") && (
 						<Popconfirm
-							title="确定删除该部门吗？"
-							description="存在子部门或部门下存在用户时将被拦截"
-							okText="删除"
-							cancelText="取消"
+							title={t("department.deleteConfirm")}
+							description={t("department.deleteBlocked")}
+							okText={t("system.delete")}
+							cancelText={t("common.cancel")}
 							okButtonProps={{ danger: true }}
 							onConfirm={() => handleDelete(record)}
 						>
@@ -280,7 +292,7 @@ const DeptPage: React.FC = () => {
 								variant="filled"
 								icon={<DeleteOutlined />}
 							>
-								删除
+								{t("system.delete")}
 							</Button>
 						</Popconfirm>
 					)}
@@ -296,7 +308,7 @@ const DeptPage: React.FC = () => {
 				rowKey="id"
 				api={deptTreeApi}
 				columns={columns}
-				title="部门管理"
+				title={t("department.title")}
 				index={false}
 				toolbarExtra={
 					hasPerm("system:dept:add") ? (
@@ -305,18 +317,24 @@ const DeptPage: React.FC = () => {
 							icon={<PlusOutlined />}
 							onClick={() => openAdd()}
 						>
-							新增部门
+							{t("department.add")}
 						</Button>
 					) : undefined
 				}
 				search={{
 					fields: [
-						{ type: "input", label: "部门名称", name: "deptName" },
+						{ type: "input", label: t("department.name"), name: "deptName" },
 						{
 							type: "select",
-							label: "状态",
+							label: t("system.status"),
 							name: "status",
-							fieldProps: { options: STATUS_OPTIONS, allowClear: true },
+							fieldProps: {
+								options: STATUS_OPTIONS.map((item) => ({
+									...item,
+									label: t(item.label),
+								})),
+								allowClear: true,
+							},
 						},
 					],
 				}}

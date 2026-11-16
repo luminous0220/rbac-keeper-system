@@ -7,6 +7,7 @@ import type {
 	ListSelectorNode,
 	ListSelectorProps,
 } from "./types";
+import { useTranslation } from "react-i18next";
 
 export type {
 	ListItemData,
@@ -29,11 +30,13 @@ export const ListSelector: React.FC<ListSelectorProps> = ({
 	checkedKeys: controlledCheckedKeys,
 	onChange,
 	api,
-	placeholder = "请选择",
+	placeholder: providedPlaceholder,
 	disabled = false,
 	width,
 	renderTrigger,
 }) => {
+	const { t } = useTranslation();
+	const placeholder = providedPlaceholder ?? t("common.select");
 	const isControlled = controlledCheckedKeys !== undefined;
 	const [internalCheckedKeys, setInternalCheckedKeys] = useState<ListSelectorKey[]>(
 		controlledCheckedKeys ?? [],

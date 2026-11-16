@@ -24,20 +24,29 @@ import dayjs from "dayjs";
 import { EditOutlined, ReloadOutlined } from "@ant-design/icons";
 import { filterTree } from "@/libs";
 import { IconSearch } from "@tabler/icons-react";
+import { useTranslation } from "react-i18next";
+import i18n from "@/i18n";
 
 // 性别展示：UserItem.sex 按 model 语义 1男 2女（0 为新增接口遗留的未知态）
-const SEX_TEXT: Record<number, string> = { 0: "未知", 1: "男", 2: "女" };
+const SEX_TEXT: Record<number, string> = {
+	0: "profile.unknown",
+	1: "profile.male",
+	2: "profile.female",
+};
 // 账号状态：model 语义 0禁用 1正常
-const STATUS_TEXT: Record<number, string> = { 0: "停用", 1: "正常" };
+const STATUS_TEXT: Record<number, string> = {
+	0: "common.disabled",
+	1: "common.enabled",
+};
 const STATUS_OPTIONS = [
-	{ label: "正常", value: 1 },
-	{ label: "停用", value: 0 },
+	{ label: "common.enabled", value: 1 },
+	{ label: "common.disabled", value: 0 },
 ];
 // 性别选项：新增/编辑/列表统一按 model 语义 0未知 1男 2女（后端已对齐为 omitempty,oneof=0 1 2）
 const SEX_OPTIONS = [
-	{ label: "未知", value: 0 },
-	{ label: "男", value: 1 },
-	{ label: "女", value: 2 },
+	{ label: "profile.unknown", value: 0 },
+	{ label: "profile.male", value: 1 },
+	{ label: "profile.female", value: 2 },
 ];
 
 const presets = [
@@ -82,6 +91,7 @@ function toTreeData(nodes: IApi.DeptRaw[]): TreeNodeItem[] {
  */
 const UserPage: React.FC = () => {
 	const { message } = App.useApp();
+	const { t } = useTranslation();
 	const { hasPerm } = usePerms();
 	const tableRef = useRef<ProTableRef<IApi.UserItem>>(null);
 
@@ -98,7 +108,9 @@ const UserPage: React.FC = () => {
 		setDeptLoading(true); // 点击刷新时也应显示 loading
 		Api.getDeptTree()
 			.then(setDeptTree)
-			.catch((err) => console.error("加载部门树失败", err))
+			.catch((err) =>
+				console.error(i18n.t("system.departmentTreeLoadFailed"), err),
+			)
 			.finally(() => setDeptLoading(false));
 	}, []);
 
@@ -111,7 +123,7 @@ const UserPage: React.FC = () => {
 					list.map((r) => ({ label: r.role_name, value: r.role_key })),
 				);
 			})
-			.catch((err) => console.error("加载角色列表失败", err));
+			.catch((err) => console.error(i18n.t("system.roleListLoadFailed"), err));
 	}, [fetchDeptTree]);
 
 	const deptTreeData = useMemo(() => toTreeSelect(deptTree), [deptTree]);
@@ -120,10 +132,10 @@ const UserPage: React.FC = () => {
 	const [searchValue, setSearchValue] = useState("");
 	const deptFilterTree = useMemo<TreeNodeItem[]>(() => {
 		const originalTree = [
-			{ title: "全部部门", key: 0, children: toTreeData(deptTree) },
+			{ title: t("user.allDepartments"), key: 0, children: toTreeData(deptTree) },
 		];
 		return filterTree(originalTree, searchValue);
-	}, [deptTree, searchValue]);
+	}, [deptTree, searchValue, t]);
 
 	// 部门树加载完成后默认全部展开（antd defaultExpandAll 只在首次挂载生效，异步数据需受控展开）
 	const allDeptKeys = useMemo(() => {
@@ -188,63 +200,68 @@ const UserPage: React.FC = () => {
 			// --- 公共字段 ---
 			{
 				type: "input",
-				label: "昵称",
+				label: t("user.nickname"),
 				name: "nickname",
-				fieldProps: { maxLength: 30, placeholder: "请输入昵称" },
-				rules: [{ required: true, message: "请输入昵称" }],
+				fieldProps: { maxLength: 30, placeholder: t("user.nicknameRequired") },
+				rules: [{ required: true, message: t("user.nicknameRequired") }],
 			},
 			{
 				type: "input",
-				label: "手机号",
+				label: t("user.phone"),
 				name: "phone",
-				fieldProps: { maxLength: 11, placeholder: "请输入正确的手机号" },
-				rules: [{ pattern: /^1[3-9]\d{9}$/, message: "请输入正确的手机号" }],
+				fieldProps: { maxLength: 11, placeholder: t("user.phonePlaceholder") },
+				rules: [{ pattern: /^1[3-9]\d{9}$/, message: t("user.phoneInvalid") }],
 			},
 			{
 				type: "input",
-				label: "邮箱",
+				label: t("user.email"),
 				name: "email",
-				fieldProps: { maxLength: 50, placeholder: "请输入正确的邮箱" },
-				rules: [{ type: "email", message: "请输入正确的邮箱" }],
+				fieldProps: { maxLength: 50, placeholder: t("user.emailInvalid") },
+				rules: [{ type: "email", message: t("user.emailInvalid") }],
 			},
 			{
 				type: "radio",
-				label: "性别",
+				label: t("user.sex"),
 				name: "sex",
-				fieldProps: { options: SEX_OPTIONS },
+				fieldProps: {
+					options: SEX_OPTIONS.map((item) => ({
+						...item,
+						label: t(item.label),
+					})),
+				},
 			},
 			{
 				type: "tree-select",
-				label: "所属部门",
+				label: t("user.department"),
 				name: "deptId",
 				fieldProps: {
 					treeDefaultExpandAll: true,
 					treeData: deptTreeData,
-					placeholder: "请选择部门",
+					placeholder: t("user.selectDepartment"),
 					showSearch: true,
 				},
-				rules: [{ required: true, message: "请选择部门" }],
+				rules: [{ required: true, message: t("user.selectDepartment") }],
 			},
 			{
 				type: "select",
-				label: "角色",
+				label: t("user.role"),
 				name: "roleKeys",
 				fieldProps: {
 					options: roleOptions,
 					mode: "multiple",
-					placeholder: "请选择角色（可多选）",
+					placeholder: t("user.selectRoles"),
 				},
-				rules: [{ required: true, message: "请至少选择一个角色" }],
+				rules: [{ required: true, message: t("user.roleRequired") }],
 			},
 			{
 				type: "textarea",
-				label: "备注",
+				label: t("user.remark"),
 				name: "remark",
 				formItemProps: { className: "col-span-2" },
 				fieldProps: {
 					maxLength: 500,
 					rows: 3,
-					placeholder: "请输入备注（选填）",
+					placeholder: t("user.remarkPlaceholder"),
 				},
 			},
 		];
@@ -255,26 +272,26 @@ const UserPage: React.FC = () => {
 			fields.unshift(
 				{
 					type: "input",
-					label: "用户名",
+					label: t("user.name"),
 					name: "username",
-					fieldProps: { maxLength: 30, placeholder: "6-30 位字母或数字" },
+					fieldProps: { maxLength: 30, placeholder: t("user.usernamePlaceholder") },
 					rules: [
-						{ required: true, message: "请输入用户名" },
-						{ min: 6, max: 30, message: "用户名长度需为 6-30 位" },
-						{ pattern: /^[a-zA-Z0-9]+$/, message: "用户名只能包含字母和数字" },
+						{ required: true, message: t("user.usernameRequired") },
+						{ min: 6, max: 30, message: t("user.usernameLength") },
+						{ pattern: /^[a-zA-Z0-9]+$/, message: t("user.usernameChars") },
 					],
 				},
 				{
 					type: "input-password",
-					label: "密码",
+					label: t("user.password"),
 					name: "password",
-					fieldProps: { placeholder: "8-32 位，需同时包含字母和数字" },
+					fieldProps: { placeholder: t("user.passwordPlaceholder") },
 					rules: [
-						{ required: true, message: "请输入密码" },
-						{ min: 8, max: 32, message: "密码长度需为 8-32 位" },
+						{ required: true, message: t("user.passwordRequired") },
+						{ min: 8, max: 32, message: t("user.passwordLength") },
 						{
 							pattern: /^(?=.*[A-Za-z])(?=.*\d).{8,32}$/,
-							message: "密码需同时包含字母和数字",
+							message: t("user.passwordRequirements"),
 						},
 					],
 				},
@@ -284,18 +301,18 @@ const UserPage: React.FC = () => {
 			fields.unshift(
 				{
 					type: "input-password",
-					label: "密码",
+					label: t("user.password"),
 					name: "password",
-					fieldProps: { placeholder: "留空则不修改密码" },
+					fieldProps: { placeholder: t("user.passwordOptional") },
 					rules: [
 						{
 							validator: (_rule: any, value: string) => {
 								if (!value) return Promise.resolve();
 								if (value.length < 8 || value.length > 32) {
-									return Promise.reject(new Error("密码长度需为 8-32 位"));
+									return Promise.reject(new Error(t("user.passwordLength")));
 								}
 								if (!/(?=.*[A-Za-z])(?=.*\d)/.test(value)) {
-									return Promise.reject(new Error("密码需同时包含字母和数字"));
+									return Promise.reject(new Error(t("user.passwordRequirements")));
 								}
 								return Promise.resolve();
 							},
@@ -304,34 +321,39 @@ const UserPage: React.FC = () => {
 				},
 				{
 					type: "radio",
-					label: "状态",
+					label: t("user.status"),
 					name: "status",
-					fieldProps: { options: STATUS_OPTIONS },
-					rules: [{ required: true, message: "请选择状态" }],
+					fieldProps: {
+						options: STATUS_OPTIONS.map((item) => ({
+							...item,
+							label: t(item.label),
+						})),
+					},
+					rules: [{ required: true, message: t("department.statusRequired") }],
 				},
 			);
 		}
 
 		return fields;
-	}, [formMode.type, deptTreeData, roleOptions]);
+	}, [formMode.type, deptTreeData, roleOptions, t]);
 
 	// 新增表单
 	const handleOpenAdd = useCallback(() => {
 		setFormMode({ type: "add" });
 		formRef.current?.open({
-			title: "新增用户",
+			title: t("user.add"),
 			initialValues: {
 				sex: 1, // 默认男
 				...(selectedDeptId ? { deptId: selectedDeptId } : {}),
 			},
 		});
-	}, [selectedDeptId]);
+	}, [selectedDeptId, t]);
 
 	// 编辑表单
 	const openEdit = useCallback((record: IApi.UserItem) => {
 		setFormMode({ type: "edit", record });
 		formRef.current?.open({
-			title: `编辑用户：${record.username}`,
+			title: `${t("user.edit")}: ${record.username}`,
 			initialValues: {
 				password: "",
 				deptId: record.dept?.id,
@@ -344,7 +366,7 @@ const UserPage: React.FC = () => {
 			},
 			extraParams: { username: record.username }, // 将 username 存入 extraParams 以便提交时使用
 		});
-	}, []);
+	}, [t]);
 
 	// 提交处理函数
 	const handleFormSubmit = useCallback(
@@ -366,7 +388,7 @@ const UserPage: React.FC = () => {
 					roleKeys: values.roleKeys,
 					remark: values.remark ?? "",
 				});
-				message.success("新增用户成功");
+				message.success(t("user.addSuccess"));
 			} else {
 				// --- 编辑逻辑 ---
 				const username = extraParams?.username as string;
@@ -378,12 +400,12 @@ const UserPage: React.FC = () => {
 				if (values.password) body.password = values.password;
 
 				await Api.editUser(username, body);
-				message.success("修改成功");
+				message.success(t("user.editSuccess"));
 			}
 
 			tableRef.current?.refresh();
 		},
-		[formMode.type, message], // 依赖项中加入 formMode.type
+		[formMode.type, message, t], // 依赖项中加入 formMode.type
 	);
 
 	// ---- 列配置 ----
@@ -391,7 +413,7 @@ const UserPage: React.FC = () => {
 		if (roleOptions.length <= 0 || deptFlatenOptions.length <= 0) return [];
 		return [
 			{
-				title: "用户名",
+				title: t("user.name"),
 				dataIndex: "username",
 				width: 120,
 				render: (v) => (
@@ -402,15 +424,15 @@ const UserPage: React.FC = () => {
 					</>
 				),
 			},
-			{ title: "昵称", dataIndex: "nickname", width: 120 },
+			{ title: t("user.nickname"), dataIndex: "nickname", width: 120 },
 			{
-				title: "部门",
+				title: t("system.department"),
 				dataIndex: "dept",
 				width: 120,
 				render: (_, record) => record.dept?.dept_name ?? "-",
 			},
 			{
-				title: "角色",
+				title: t("system.role"),
 				dataIndex: "roles",
 				filters: roleOptions.map((item) => ({
 					text: item.label,
@@ -433,7 +455,7 @@ const UserPage: React.FC = () => {
 					),
 			},
 			{
-				title: "手机号",
+				title: t("user.phone"),
 				dataIndex: "phone",
 				width: 120,
 				render: (v) => (
@@ -444,42 +466,42 @@ const UserPage: React.FC = () => {
 					</>
 				),
 			},
-			{ title: "邮箱", dataIndex: "email", width: 160, ellipsis: true },
+			{ title: t("user.email"), dataIndex: "email", width: 160, ellipsis: true },
 			{
-				title: "性别",
+				title: t("user.sex"),
 				dataIndex: "sex",
 				width: 70,
 				filters: SEX_OPTIONS.map((item) => ({
-					text: item.label,
+					text: t(item.label),
 					value: item.value,
 				})),
 				onFilter: (value, record) => record.sex == value,
 
-				render: (value) => SEX_TEXT[(value as number) ?? 0] ?? "未知",
+				render: (value) => t(SEX_TEXT[(value as number) ?? 0] ?? "profile.unknown"),
 			},
 			{
-				title: "状态",
+				title: t("system.status"),
 				dataIndex: "status",
 				width: 80,
 				filters: STATUS_OPTIONS.map((item) => ({
-					text: item.label,
+					text: t(item.label),
 					value: item.value,
 				})),
 				onFilter: (value, record) => record.status == value,
 				render: (value) => (
 					<Tag color={(value as number) === 1 ? "green" : "red"}>
-						{STATUS_TEXT[(value as number) ?? 0] ?? "-"}
+						{t(STATUS_TEXT[(value as number) ?? 0] ?? "-")}
 					</Tag>
 				),
 			},
 			{
-				title: "创建时间",
+				title: t("system.createdAt"),
 				dataIndex: "createdAt",
 				width: 170,
 				render: (time) => dayjs(time).format("YYYY-MM-DD HH:mm:ss"),
 			},
 			{
-				title: "操作",
+				title: t("system.action"),
 				key: "action",
 				width: 90,
 				fixed: "right",
@@ -491,12 +513,12 @@ const UserPage: React.FC = () => {
 						icon={<EditOutlined />}
 						onClick={() => openEdit(record)}
 					>
-						编辑
+						{t("system.edit")}
 					</Button>
 				),
 			},
 		];
-	}, [roleOptions, openEdit, deptFlatenOptions]);
+	}, [roleOptions, openEdit, deptFlatenOptions, t]);
 
 	// ---- 表格配置 ----
 	const tableProps: ProTableProps<IApi.UserItem> = useMemo(() => {
@@ -504,30 +526,33 @@ const UserPage: React.FC = () => {
 			rowKey: "username",
 			api: Api.getUserList,
 			columns: columns, // 建议你的 columns 变量也使用 useMemo 包裹
-			title: "用户管理",
+			title: t("user.title"),
 			externalParams: externalParams, // 如果 externalParams 是动态的，确保它也是稳定引用
 			search: {
 				fields: [
 					{
 						type: "input",
-						label: "用户名",
+						label: t("user.name"),
 						name: "username",
-						fieldProps: { placeholder: "请输入" },
+						fieldProps: { placeholder: t("common.input") },
 					},
 					{
 						type: "input",
-						label: "手机号",
+						label: t("user.phone"),
 						name: "phone",
-						fieldProps: { placeholder: "请输入" },
+						fieldProps: { placeholder: t("common.input") },
 					},
 					{
 						type: "select",
-						label: "状态",
+						label: t("user.status"),
 						name: "status",
 						fieldProps: {
-							options: STATUS_OPTIONS,
 							allowClear: true,
-							placeholder: "点击选择",
+							placeholder: t("common.select"),
+							options: STATUS_OPTIONS.map((item) => ({
+								...item,
+								label: t(item.label),
+							})),
 						},
 					},
 				],
@@ -537,11 +562,11 @@ const UserPage: React.FC = () => {
 					type="primary"
 					onClick={handleOpenAdd} // 改为调用新的 handleOpenAdd
 				>
-					新增用户
+					{t("user.add")}
 				</Button>
 			),
 		};
-	}, [columns, externalParams, hasPerm, handleOpenAdd]);
+	}, [columns, externalParams, hasPerm, handleOpenAdd, t]);
 
 	return (
 		<>
@@ -549,11 +574,11 @@ const UserPage: React.FC = () => {
 				{/* 左侧部门树：选中部门后右侧表格按「该部门 + 全部子部门」过滤（data-scope 仍叠加生效） */}
 				<Card
 					className="w-[223px] self-stretch"
-					title="部门"
+					title={t("user.department")}
 					size="small"
 					loading={deptLoading}
 					extra={
-						<Tooltip title="刷新">
+						<Tooltip title={t("system.refresh")}>
 							<Button icon={<ReloadOutlined />} onClick={fetchDeptTree} />
 						</Tooltip>
 					}
@@ -566,7 +591,7 @@ const UserPage: React.FC = () => {
 				>
 					<Input
 						className="w-full mb-2"
-						placeholder="搜索部门"
+						placeholder={t("system.searchDepartment")}
 						prefix={
 							<IconSearch size={14} stroke={1.5} className="text-gray-400" />
 						}

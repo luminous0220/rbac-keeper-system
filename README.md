@@ -44,7 +44,7 @@
 
 <p align="right"><a href="#english">切换到 English →</a></p>
 
-基于 RBAC 的后台权限管理系统，包含 React 管理端和 Go API 服务，提供用户、角色、菜单、部门、字典及登录/操作日志等功能。
+基于 RBAC 的后台权限管理系统，包含 React 管理端和 Go API 服务，支持用户、角色、菜单、部门、字典、登录及操作日志管理；Casbin 实现 RBAC 权限策略，JWT 身份认证，RocketMQ 异步消息处理，Redis 缓存与限流。
 
 ### 📁 项目结构
 
@@ -81,6 +81,7 @@
 - Ant Design 6、Tailwind CSS 3、SCSS
 - React Router 7、Zustand、TanStack Query、Axios
 - ECharts、React ECharts
+- i18next、react-i18next：简体中文/英文界面切换
 
 **服务端 (`server/`)**
 
@@ -171,7 +172,7 @@ HTTP 服务监听 `config.yaml` 中 `server.port` 指定的端口（仓库示例
 
 <p align="right"><a href="#中文">切换到中文 →</a></p>
 
-An RBAC-based administration system with a React admin console and a Go API server. It includes user, role, menu, department, dictionary, login-log, and operation-log management.
+An RBAC-based backend permission management system, including React admin frontend and Go API service. Features user, role, menu, department, dictionary, login & operation log management. Integrated with Casbin for RBAC policy, JWT for authentication, RocketMQ for async message processing, Redis for caching and rate limiting.
 
 
 ### 📁 Project Structure
@@ -209,6 +210,7 @@ An RBAC-based administration system with a React admin console and a Go API serv
 - Ant Design 6, Tailwind CSS 3, and SCSS
 - React Router 7, Zustand, TanStack Query, and Axios
 - ECharts and React ECharts
+- i18next and react-i18next for Simplified Chinese/English UI localization
 
 **Server (`server/`)**
 

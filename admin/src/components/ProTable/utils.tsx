@@ -4,6 +4,7 @@ import type {
 	ProTableColumnFixed,
 } from "./types.d";
 import { Tag } from "antd";
+import i18n from "@/i18n";
 
 /** 默认分页大小 */
 export const DEFAULT_PAGE_SIZE = 20;
@@ -108,7 +109,7 @@ export function createIndexColumn<T>(
 ): ProTableColumnType<T> {
 	return {
 		key: "__index__",
-		title: "序号",
+		title: i18n.t("table.index"),
 		width,
 		align: "center", // 明确对齐
 		hideable: false,

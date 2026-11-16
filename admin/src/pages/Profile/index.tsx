@@ -7,13 +7,7 @@ import { Api } from "@/apis";
 import { useAuthStore } from "@/stores";
 import { clearAuthToken } from "@/libs";
 import { CFG } from "@/constants";
-
-// 性别选项（与后端 model 语义一致：0未知 1男 2女）
-const SEX_OPTIONS = [
-	{ label: "未知", value: 0 },
-	{ label: "男", value: 1 },
-	{ label: "女", value: 2 },
-];
+import { useTranslation } from "react-i18next";
 
 /**
  * 个人信息页：个人信息 / 修改密码 两个 Tab。
@@ -23,6 +17,7 @@ const SEX_OPTIONS = [
  */
 const ProfilePage: React.FC = () => {
 	const { message } = App.useApp();
+	const { t } = useTranslation();
 	const navigate = useNavigate();
 	const [searchParams, setSearchParams] = useSearchParams();
 	// 初始 Tab 由 URL 决定（hash 路由下 useSearchParams 同样生效）
@@ -61,53 +56,61 @@ const ProfilePage: React.FC = () => {
 				avatar: info.avatar,
 			});
 		} catch (err) {
-			console.error("加载个人信息失败", err);
+			console.error(t("profile.loadFailed"), err);
 		}
-	}, [infoForm, setUserInfo]);
+	}, [infoForm, setUserInfo, t]);
 
 	useEffect(() => {
 		loadProfile();
 	}, [loadProfile]);
 
 	// 个人信息字段：username 只读，其余可编辑
+	const sexOptions = [
+		{ label: t("profile.unknown"), value: 0 },
+		{ label: t("profile.male"), value: 1 },
+		{ label: t("profile.female"), value: 2 },
+	];
 	const infoFields: ProFormFields = [
 		{
 			type: "input",
-			label: "用户名",
+			label: t("profile.username"),
 			name: "username",
 			disabled: true,
-			fieldProps: { disabled: true, placeholder: "用户名不可修改" },
+			fieldProps: {
+				disabled: true,
+				placeholder: t("profile.usernameImmutable"),
+			},
 		},
 		{
 			type: "input",
-			label: "昵称",
+			label: t("profile.nickname"),
 			name: "nickname",
-			rules: [{ required: true, message: "请输入昵称" }],
+			rules: [{ required: true, message: t("profile.nicknameRequired") }],
 		},
 		{
 			type: "input",
-			label: "手机号",
+			label: t("profile.phone"),
 			name: "phone",
 			fieldProps: { maxLength: 11 },
-			rules: [{ pattern: /^1[3-9]\d{9}$/, message: "请输入正确的手机号" }],
+			rules: [{ pattern: /^1[3-9]\d{9}$/, message: t("profile.phoneInvalid") }],
 		},
 		{
 			type: "input",
-			label: "邮箱",
+			label: t("profile.email"),
 			name: "email",
-			rules: [{ type: "email", message: "请输入正确的邮箱" }],
+			rules: [{ type: "email", message: t("profile.emailInvalid") }],
 		},
 		{
 			type: "radio",
-			label: "性别",
+			label: t("profile.sex"),
 			name: "sex",
-			fieldProps: { options: SEX_OPTIONS },
+			fieldProps: { options: sexOptions },
 		},
 		{
 			type: "input",
-			label: "头像地址",
+			label: t("profile.avatar"),
 			name: "avatar",
-			fieldProps: { placeholder: "请输入头像图片地址（暂不支持上传）" },
+			fieldProps: { placeholder: t("profile.avatarPlaceholder") },
 		},
 	];
 
@@ -122,47 +125,47 @@ const ProfilePage: React.FC = () => {
 				avatar: values.avatar ?? "",
 			});
 			setUserInfo(res);
-			message.success("个人信息已保存");
+			message.success(t("profile.saved"));
 		},
-		[message, setUserInfo],
+		[message, setUserInfo, t],
 	);
 
 	// 修改密码字段：新密码与后端约束对齐（8-32 位字母数字），二次确认仅前端
 	const pwdFields: ProFormFields = [
 		{
 			type: "input-password",
-			label: "旧密码",
+			label: t("profile.oldPassword"),
 			name: "oldPassword",
-			rules: [{ required: true, message: "请输入旧密码" }],
+			rules: [{ required: true, message: t("profile.oldPasswordRequired") }],
 		},
 		{
 			type: "input-password",
-			label: "新密码",
+			label: t("profile.newPassword"),
 			name: "newPassword",
-			fieldProps: { placeholder: "8-32 位字母或数字" },
+			fieldProps: { placeholder: t("profile.passwordPlaceholder") },
 			rules: [
-				{ required: true, message: "请输入新密码" },
-				{ min: 8, max: 32, message: "密码长度需为 8-32 位" },
+				{ required: true, message: t("profile.newPasswordRequired") },
+				{ min: 8, max: 32, message: t("profile.passwordLength") },
 				{
 					pattern: /^[a-zA-Z0-9]+$/,
-					message: "密码只能包含字母和数字",
+					message: t("profile.passwordChars"),
 				},
 			],
 		},
 		{
 			type: "input-password",
-			label: "确认新密码",
+			label: t("profile.confirmPassword"),
 			name: "confirmPassword",
-			fieldProps: { placeholder: "请再次输入新密码" },
+			fieldProps: { placeholder: t("profile.confirmPasswordPlaceholder") },
 			// 依赖新密码字段，输入变化时自动重新校验一致性
 			formItemProps: { dependencies: ["newPassword"] },
 			rules: [
-				{ required: true, message: "请再次输入新密码" },
+				{ required: true, message: t("profile.confirmPasswordRequired") },
 				{
 					validator: (_rule: any, value: string) =>
 						!value || pwdForm.getFieldValue("newPassword") === value
 							? Promise.resolve()
-							: Promise.reject(new Error("两次输入的密码不一致")),
+							: Promise.reject(new Error(t("profile.passwordMismatch"))),
 				},
 			],
 		},
@@ -175,12 +178,12 @@ const ProfilePage: React.FC = () => {
 				oldPassword: values.oldPassword,
 				newPassword: values.newPassword,
 			});
-			message.success("密码修改成功，请重新登录");
+			message.success(t("profile.passwordUpdated"));
 			clearAuthToken();
 			resetAuth();
 			navigate(CFG.LOGIN_PATH, { replace: true });
 		},
-		[message, navigate, resetAuth],
+		[message, navigate, resetAuth, t],
 	);
 
 	return (
@@ -191,14 +194,17 @@ const ProfilePage: React.FC = () => {
 				items={[
 					{
 						key: "info",
-						label: "个人信息",
+						label: t("profile.info"),
 						children: (
 							<div className="max-w-xl">
 								<ProForm
 									form={infoForm}
 									type="pure"
 									fields={infoFields}
-									defaultButtons={{ confirmText: "保存", hideReset: true }}
+									defaultButtons={{
+										confirmText: t("common.save"),
+										hideReset: true,
+									}}
 									onConfirm={handleInfoSubmit}
 								/>
 							</div>
@@ -206,14 +212,17 @@ const ProfilePage: React.FC = () => {
 					},
 					{
 						key: "password",
-						label: "修改密码",
+						label: t("profile.changePassword"),
 						children: (
 							<div className="max-w-xl">
 								<ProForm
 									form={pwdForm}
 									type="pure"
 									fields={pwdFields}
-									defaultButtons={{ confirmText: "确认修改", hideReset: true }}
+									defaultButtons={{
+										confirmText: t("profile.confirmUpdate"),
+										hideReset: true,
+									}}
 									onConfirm={handlePwdSubmit}
 								/>
 							</div>

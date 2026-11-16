@@ -1,6 +1,7 @@
 import { Button, Form } from "antd";
 import { memo } from "react";
 import type { ProFormProps } from "../types.d";
+import { useTranslation } from "react-i18next";
 
 /** Footer 按钮组件（重置 + 确认） */
 export const FormFooter = memo(function FormFooter({
@@ -16,9 +17,10 @@ export const FormFooter = memo(function FormFooter({
 	onReset: () => void;
 	className?: string;
 }) {
+	const { t } = useTranslation();
 	const {
-		confirmText = "确认",
-		resetText = "重置",
+		confirmText = t("common.confirm"),
+		resetText = t("common.reset"),
 		hideConfirm,
 		hideReset,
 		confirmStyle,

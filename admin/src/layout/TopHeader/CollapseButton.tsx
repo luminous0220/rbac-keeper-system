@@ -4,6 +4,7 @@ import {
 } from "@tabler/icons-react";
 import { Button } from "antd";
 import { useThemeStore } from "@/stores/theme";
+import { useTranslation } from "react-i18next";
 
 export interface CollapseProps {
   className?: string;
@@ -17,6 +18,7 @@ export const CollapseButton = ({
   className = "",
 }: CollapseProps) => {
   const { colorVariants } = useThemeStore();
+  const { t } = useTranslation();
 
   const toggleCollapsed = () => {
     const newCollapsed = !collapsed;
@@ -35,7 +37,7 @@ export const CollapseButton = ({
         )
       }
       onClick={toggleCollapsed}
-      aria-label={collapsed ? "展开菜单" : "收起菜单"}
+      aria-label={collapsed ? t("layout.expandMenu") : t("layout.collapseMenu")}
       style={{
         transition: "all 0.2s",
       }}

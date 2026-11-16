@@ -7,6 +7,7 @@ import type {
 	TableModalViewRef,
 	TableModalOpenProps,
 } from "./type";
+import { useTranslation } from "react-i18next";
 
 export type { TableModalViewProps, TableModalViewRef, TableModalOpenProps } from "./type";
 
@@ -16,9 +17,10 @@ export type { TableModalViewProps, TableModalViewRef, TableModalOpenProps } from
  * ref.close() 关闭弹窗。无触发器，完全由父组件编程式控制。
  */
 function TableModalViewInner<T extends Record<string, any> = Record<string, any>>(
-	{ title: defaultTitle = "查看数据", width = 1280 }: TableModalViewProps,
+	{ title: defaultTitle, width = 1280 }: TableModalViewProps,
 	ref: React.ForwardedRef<TableModalViewRef<T>>,
 ) {
+	const { t } = useTranslation();
 	const [isOpen, setIsOpen] = useState(false);
 	const [tableProps, setTableProps] = useState<TableModalOpenProps<T>>({});
 	const tableRef = useRef<ProTableRef<T>>(null);
@@ -60,7 +62,7 @@ function TableModalViewInner<T extends Record<string, any> = Record<string, any>
 		<ProModal
 			open={isOpen}
 			onCancel={close}
-			title={modalTitle ?? defaultTitle}
+			title={modalTitle ?? defaultTitle ?? t("table.viewData")}
 			width={width}
 			footer={null}
 			destroyOnHidden

@@ -8,12 +8,16 @@ import { usePerms } from "@/hooks";
 import { downloadBlob } from "@/libs";
 import { toDateTime } from "@/libs/date";
 import dayjs from "dayjs";
+import { useTranslation } from "react-i18next";
 
 // 操作状态：0正常 1异常（dto.OperationLogItem.Status）
-const STATUS_TEXT: Record<number, string> = { 0: "正常", 1: "异常" };
+const STATUS_TEXT: Record<number, string> = {
+	0: "logs.normal",
+	1: "logs.abnormal",
+};
 const STATUS_OPTIONS = [
-	{ label: "正常", value: 0 },
-	{ label: "异常", value: 1 },
+	{ label: "logs.normal", value: 0 },
+	{ label: "logs.abnormal", value: 1 },
 ];
 
 /**
@@ -26,6 +30,7 @@ const STATUS_OPTIONS = [
  */
 const OperationLogPage: React.FC = () => {
 	const { message, modal } = App.useApp();
+	const { t } = useTranslation();
 	const { hasPerm } = usePerms();
 	const tableRef = useRef<ProTableRef<IApi.OperationLogItem>>(null);
 	// 最近一次已查询的筛选参数（导出复用：导出的即当前表格所查）
@@ -52,7 +57,7 @@ const OperationLogPage: React.FC = () => {
 		try {
 			const blob = await Api.exportOperationLogs({ ...lastQueryRef.current });
 			downloadBlob(blob, "operation_logs.csv");
-			message.success("导出成功");
+			message.success(t("logs.exportSuccess"));
 		} catch {
 			/* noop */
 		}
@@ -60,14 +65,14 @@ const OperationLogPage: React.FC = () => {
 
 	const confirmClear = () => {
 		modal.confirm({
-			title: "清空操作日志",
-			content: "确定清空全部操作日志吗？该操作不可恢复。",
-			okText: "清空",
+			title: t("logs.clearOperation"),
+			content: t("logs.clearOperationConfirm"),
+			okText: t("logs.clear"),
 			okButtonProps: { danger: true },
 			onOk: async () => {
 				try {
 					await Api.clearOperationLogs();
-					message.success("操作日志已清空");
+					message.success(t("logs.operationCleared"));
 					tableRef.current?.refresh();
 				} catch {
 					/* noop */
@@ -77,40 +82,40 @@ const OperationLogPage: React.FC = () => {
 	};
 
 	const columns: ProTableColumnType<IApi.OperationLogItem>[] = [
-		{ title: "模块标题", dataIndex: "title", width: 140, ellipsis: true, render: (v) => v || "-" },
+		{ title: t("logs.moduleTitle"), dataIndex: "title", width: 140, ellipsis: true, render: (v) => v || "-" },
 		{
-			title: "请求方式",
+			title: t("logs.requestMethod"),
 			dataIndex: "requestMethod",
 			width: 110,
 			render: (value) => <Typography.Text code>{value as string}</Typography.Text>,
 		},
-		{ title: "操作人员", dataIndex: "operName", width: 120, render: (v) => v || "-" },
-		{ title: "请求 URL", dataIndex: "operUrl", width: 240, ellipsis: true, render: (v) => v || "-" },
+		{ title: t("logs.operator"), dataIndex: "operName", width: 120, render: (v) => v || "-" },
+		{ title: t("logs.requestUrl"), dataIndex: "operUrl", width: 240, ellipsis: true, render: (v) => v || "-" },
 		{
-			title: "操作 IP",
+			title: t("logs.operationIp"),
 			dataIndex: "operIp",
 			width: 130,
 			render: (value) => <Typography.Text code>{value as string}</Typography.Text>,
 		},
 		{
-			title: "状态",
+			title: t("logs.status"),
 			dataIndex: "status",
 			width: 80,
 			render: (value) => (
 				<Tag color={(value as number) === 0 ? "green" : "red"}>
-					{STATUS_TEXT[(value as number) ?? 0] ?? "-"}
+					{t(STATUS_TEXT[(value as number) ?? 0] ?? "-")}
 				</Tag>
 			),
 		},
 		{
-			title: "异常信息",
+			title: t("logs.errorMessage"),
 			dataIndex: "errorMsg",
 			width: 220,
 			ellipsis: true,
 			render: (v) => (v ? <Typography.Text type="danger">{v as string}</Typography.Text> : "-"),
 		},
 		{
-			title: "操作时间",
+			title: t("logs.operationTime"),
 			dataIndex: "operTime",
 			width: 180,
 			render: (time) => dayjs(time).format("YYYY-MM-DD HH:mm:ss"),
@@ -123,42 +128,48 @@ const OperationLogPage: React.FC = () => {
 			rowKey="id"
 			api={operationLogApi}
 			columns={columns}
-			title="操作日志"
+			title={t("logs.operationTitle")}
 			toolbarExtra={
 				<>
 					{hasPerm("monitor:log:operation:export") && (
 						<Button icon={<DownloadOutlined />} onClick={handleExport}>
-							导出
+							{t("table.export")}
 						</Button>
 					)}
 					{hasPerm("monitor:log:operation:clear") && (
 						<Button danger icon={<DeleteOutlined />} onClick={confirmClear}>
-							清空
+							{t("logs.clear")}
 						</Button>
 					)}
 				</>
 			}
 			search={{
 				fields: [
-					{ type: "input", label: "模块标题", name: "title" },
-					{ type: "input", label: "操作人员", name: "operName" },
+					{ type: "input", label: t("logs.moduleTitle"), name: "title" },
+					{ type: "input", label: t("logs.operator"), name: "operName" },
 					{
 						type: "select",
-						label: "状态",
+						label: t("logs.status"),
 						name: "status",
-						fieldProps: { options: STATUS_OPTIONS, allowClear: true },
+						fieldProps: {
+							options: STATUS_OPTIONS.map((item) => ({
+								...item,
+								label: t(item.label),
+							})),
+							allowClear: true,
+						},
 					},
 					{
 						type: "date-picker",
-						label: "开始时间",
+						label: t("logs.startTime"),
 						name: "startTime",
-						fieldProps: { showTime: true, style: { width: "100%" }, placeholder: "开始时间" },
+						fieldProps: { showTime: true, style: { width: "100%" }, placeholder: t("logs.startTime") },
 					},
 					{
 						type: "date-picker",
-						label: "结束时间",
+						label: t("logs.endTime"),
 						name: "endTime",
-						fieldProps: { showTime: true, style: { width: "100%" }, placeholder: "结束时间" },
+						fieldProps: { showTime: true, style: { width: "100%" }, placeholder: t("logs.endTime") },
 					},
 				],
 			}}

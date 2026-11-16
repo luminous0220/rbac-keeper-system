@@ -13,7 +13,12 @@ import {
 import { CollapseButton, CollapseProps } from "./CollapseButton";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useAuthStore } from "@/stores";
-import { IconUser, IconKey, IconLogout, IconSearch } from "@tabler/icons-react";
+import {
+	IconUser,
+	IconKey,
+	IconLogout,
+	IconSearch,
+} from "@tabler/icons-react";
 import { IconMap, clearAuthToken } from "@/libs";
 import { useNavigate, useLocation } from "react-router";
 import { CFG } from "@/constants";
@@ -22,6 +27,9 @@ import type { IApi } from "@/apis";
 import { useMemo, useState } from "react";
 import { Api } from "@/apis";
 import { Setting } from "./Setting";
+import { useTranslation } from "react-i18next";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { translateMenuTitle } from "@/i18n/menu";
 
 interface TopHeaderProps extends CollapseProps {
 	className?: string;
@@ -43,24 +51,31 @@ interface FlatMenuNode {
 /** 递归扁平化菜单树，返回所有可导航的菜单项 */
 function flattenMenus(
 	menus: IApi.MenuRaw[],
+	translate: (key: string) => string,
 	trail: { path: string; title: string; icon: string }[] = [],
 ): FlatMenuNode[] {
 	const result: FlatMenuNode[] = [];
 	for (const menu of menus) {
+		const title = translateMenuTitle(
+			menu.path,
+			menu.component,
+			menu.menu_name,
+			translate,
+		);
 		const currentTrail = [
 			...trail,
-			{ path: menu.path, title: menu.menu_name, icon: menu.icon },
+			{ path: menu.path, title, icon: menu.icon },
 		];
 		result.push({
 			path: menu.path,
-			title: menu.menu_name,
+			title,
 			icon: menu.icon,
 			menuType: menu.menu_type,
 			breadcrumbText: currentTrail.map((t) => t.title).join(" > "),
 			trail: currentTrail,
 		});
 		if (menu.children) {
-			result.push(...flattenMenus(menu.children, currentTrail));
+			result.push(...flattenMenus(menu.children, translate, currentTrail));
 		}
 	}
 	return result;
@@ -70,12 +85,18 @@ function flattenMenus(
 function findBreadcrumbTrail(
 	menus: IApi.MenuRaw[],
 	targetPath: string,
+	translate: (key: string) => string,
 	trail: { path: string; title: string; icon: string; menuType: string }[] = [],
 ): { path: string; title: string; icon: string; menuType: string }[] | null {
 	for (const menu of menus) {
 		const current = {
 			path: menu.path,
-			title: menu.menu_name,
+			title: translateMenuTitle(
+				menu.path,
+				menu.component,
+				menu.menu_name,
+				translate,
+			),
 			icon: menu.icon,
 			menuType: menu.menu_type,
 		};
@@ -83,10 +104,12 @@ function findBreadcrumbTrail(
 			return [...trail, current];
 		}
 		if (menu.children) {
-			const found = findBreadcrumbTrail(menu.children, targetPath, [
-				...trail,
-				current,
-			]);
+			const found = findBreadcrumbTrail(
+				menu.children,
+				targetPath,
+				translate,
+				[...trail, current],
+			);
 			if (found) return found;
 		}
 	}
@@ -97,6 +120,7 @@ export const TopHeader = ({ setCollapsed, collapsed }: TopHeaderProps) => {
 	const navigate = useNavigate();
 	const location = useLocation();
 	const { message } = App.useApp();
+	const { t } = useTranslation();
 	const userInfo = useAuthStore((s) => s.userInfo);
 	const menus = useAuthStore((s) => s.menus);
 	const resetAuth = useAuthStore((s) => s.resetAuth);
@@ -104,10 +128,17 @@ export const TopHeader = ({ setCollapsed, collapsed }: TopHeaderProps) => {
 	const [inputFocused, setInputFocused] = useState(false);
 	const { token } = theme.useToken();
 	// 扁平化菜单（用于搜索）
-	const flatMenus = useMemo(() => flattenMenus(menus), [menus]);
+	const flatMenus = useMemo(
+		() => flattenMenus(menus, (key) => t(key)),
+		[menus, t],
+	);
 	// 面包屑
 	const breadcrumbItems = useMemo(() => {
-		const trail = findBreadcrumbTrail(menus, location.pathname);
+		const trail = findBreadcrumbTrail(
+			menus,
+			location.pathname,
+			(key) => t(key),
+		);
 		if (!trail || trail.length === 0) return [];
 		return trail.map((item, index) => ({
 			title: (
@@ -121,7 +152,7 @@ export const TopHeader = ({ setCollapsed, collapsed }: TopHeaderProps) => {
 					? () => navigate(item.path)
 					: undefined,
 		}));
-	}, [menus, location.pathname, navigate]);
+	}, [menus, location.pathname, navigate, t]);
 
 	// 搜索选项
 	const searchOptions = useMemo(() => {
@@ -156,11 +187,11 @@ export const TopHeader = ({ setCollapsed, collapsed }: TopHeaderProps) => {
 		try {
 			await Api.logout();
 		} catch (err) {
-			console.error("退出登录接口调用失败，继续本地清理", err);
+			console.error(t("layout.logoutFailed"), err);
 		}
 		clearAuthToken();
 		resetAuth();
-		message.success("已退出登录");
+		message.success(t("layout.logoutSuccess"));
 		navigate(CFG.LOGIN_PATH, { replace: true });
 	};
 
@@ -168,7 +199,7 @@ export const TopHeader = ({ setCollapsed, collapsed }: TopHeaderProps) => {
 	const userMenuItems: MenuProps["items"] = [
 		{
 			key: "profile",
-			label: "个人信息",
+			label: t("layout.profile"),
 			icon: <IconUser stroke={1} />,
 			onClick: () => {
 				navigate("/profile");
@@ -176,7 +207,7 @@ export const TopHeader = ({ setCollapsed, collapsed }: TopHeaderProps) => {
 		},
 		{
 			key: "password",
-			label: "修改密码",
+			label: t("layout.changePassword"),
 			icon: <IconKey stroke={1} />,
 			onClick: () => {
 				navigate("/profile?tab=password");
@@ -187,7 +218,7 @@ export const TopHeader = ({ setCollapsed, collapsed }: TopHeaderProps) => {
 		},
 		{
 			key: "logout",
-			label: "退出登录",
+			label: t("layout.logout"),
 			icon: <IconLogout stroke={1} />,
 			danger: true,
 			onClick: handleLogout,
@@ -234,7 +265,7 @@ export const TopHeader = ({ setCollapsed, collapsed }: TopHeaderProps) => {
 					>
 						<Input
 							className="w-[326px] h-[32px]"
-							placeholder="搜索菜单..."
+							placeholder={t("layout.searchMenu")}
 							prefix={
 								<IconSearch size={14} stroke={1.5} className="text-gray-400" />
 							}
@@ -250,6 +281,8 @@ export const TopHeader = ({ setCollapsed, collapsed }: TopHeaderProps) => {
 				{/* 右侧：主题切换 + 系统设置 + 用户头像/角色标签 */}
 				<div className="flex items-center gap-2">
 					<ThemeToggle />
+
+					<LanguageSwitcher />
 
 					<Setting />
 

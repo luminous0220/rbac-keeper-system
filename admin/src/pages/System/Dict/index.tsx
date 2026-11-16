@@ -15,18 +15,22 @@ import type { TableModalViewRef } from "@/components/TableModalView";
 import { Api, IApi } from "@/apis";
 import { usePerms } from "@/hooks";
 import dayjs from "dayjs";
+import { useTranslation } from "react-i18next";
 
 // 字典类型/数据状态：0停用 1正常（model.DictType/DictData，与 constants.StatusDisabled/Enabled 一致）
-const STATUS_TEXT: Record<number, string> = { 0: "停用", 1: "正常" };
+const STATUS_TEXT: Record<number, string> = {
+	0: "common.disabled",
+	1: "common.enabled",
+};
 const STATUS_OPTIONS = [
-	{ label: "正常", value: 1 },
-	{ label: "停用", value: 0 },
+	{ label: "common.enabled", value: 1 },
+	{ label: "common.disabled", value: 0 },
 ];
 // 是否默认：0否 1是
-const DEFAULT_TEXT: Record<number, string> = { 0: "否", 1: "是" };
+const DEFAULT_TEXT: Record<number, string> = { 0: "common.no", 1: "common.yes" };
 const DEFAULT_OPTIONS = [
-	{ label: "否", value: 0 },
-	{ label: "是", value: 1 },
+	{ label: "common.no", value: 0 },
+	{ label: "common.yes", value: 1 },
 ];
 
 /**
@@ -37,6 +41,7 @@ const DEFAULT_OPTIONS = [
  */
 const DictPage: React.FC = () => {
 	const { message, modal } = App.useApp();
+	const { t } = useTranslation();
 	const { hasPerm } = usePerms();
 
 	// ==================== 字典类型（主表） ====================
@@ -60,49 +65,57 @@ const DictPage: React.FC = () => {
 		return [
 			{
 				type: "input",
-				label: "字典名称",
+				label: t("dictionary.name"),
 				name: "dictName",
-				fieldProps: { maxLength: 100, placeholder: "2-100 个字符" },
+				fieldProps: {
+					maxLength: 100,
+					placeholder: t("dictionary.namePlaceholder"),
+				},
 				rules: [
-					{ required: true, message: "请输入字典名称" },
-					{ min: 2, max: 100, message: "字典名称长度需为 2-100 位" },
+					{ required: true, message: t("dictionary.nameRequired") },
+					{ min: 2, max: 100, message: t("dictionary.nameLength") },
 				],
 			},
 			{
 				type: "input",
-				label: "字典类型",
+				label: t("dictionary.type"),
 				name: "dictType",
 				fieldProps: {
 					maxLength: 100,
-					placeholder: "唯一编码，如 sys_normal_disable",
+					placeholder: t("dictionary.typePlaceholder"),
 				},
 				rules: [
-					{ required: true, message: "请输入字典类型编码" },
-					{ min: 2, max: 100, message: "字典类型长度需为 2-100 位" },
+					{ required: true, message: t("dictionary.typeRequired") },
+					{ min: 2, max: 100, message: t("dictionary.typeLength") },
 				],
 			},
 			{
 				type: "radio",
-				label: "状态",
+				label: t("system.status"),
 				name: "status",
-				fieldProps: { options: STATUS_OPTIONS },
-				rules: [{ required: true, message: "请选择状态" }],
+				fieldProps: {
+					options: STATUS_OPTIONS.map((item) => ({
+						...item,
+						label: t(item.label),
+					})),
+				},
+				rules: [{ required: true, message: t("dictionary.statusRequired") }],
 			},
 		];
-	}, []);
+	}, [t]);
 
 	const openTypeAdd = useCallback(() => {
 		setTypeFormMode({ type: "add" });
 		typeFormRef.current?.open({
-			title: "新增字典类型",
+			title: t("dictionary.addType"),
 			initialValues: { status: 1 },
 		});
-	}, []);
+	}, [t]);
 
 	const openTypeEdit = useCallback((record: IApi.DictTypeItem) => {
 		setTypeFormMode({ type: "edit", record });
 		typeFormRef.current?.open({
-			title: `编辑字典类型：${record.dict_name}`,
+			title: `${t("system.edit")}${t("dictionary.type")}: ${record.dict_name}`,
 			initialValues: {
 				dictName: record.dict_name,
 				dictType: record.dict_type,
@@ -110,7 +123,7 @@ const DictPage: React.FC = () => {
 			},
 			extraParams: { id: record.id },
 		});
-	}, []);
+	}, [t]);
 
 	const handleTypeSubmit = useCallback(
 		async (
@@ -125,23 +138,23 @@ const DictPage: React.FC = () => {
 			};
 			if (typeFormMode.type === "add") {
 				await Api.addDictType(payload);
-				message.success("新增字典类型成功");
+				message.success(t("dictionary.addTypeSuccess"));
 			} else {
 				await Api.editDictType(extraParams?.id as number, payload);
-				message.success("修改字典类型成功");
+				message.success(t("dictionary.editTypeSuccess"));
 			}
 			typeTableRef.current?.refresh();
 		},
-		[typeFormMode.type, message],
+		[typeFormMode.type, message, t],
 	);
 
 	const handleTypeDelete = useCallback(
 		async (record: IApi.DictTypeItem) => {
 			await Api.deleteDictType(record.id);
-			message.success("删除字典类型成功");
+			message.success(t("dictionary.deleteTypeSuccess"));
 			typeTableRef.current?.refresh();
 		},
-		[message],
+		[message, t],
 	);
 
 	// ---------- 字典数据：表单 ----------
@@ -149,79 +162,89 @@ const DictPage: React.FC = () => {
 		return [
 			{
 				type: "input",
-				label: "数据标签",
+				label: t("dictionary.label"),
 				name: "dictLabel",
-				fieldProps: { maxLength: 100, placeholder: "展示名，如 男" },
+				fieldProps: { maxLength: 100, placeholder: t("dictionary.labelPlaceholder") },
 				rules: [
-					{ required: true, message: "请输入数据标签" },
-					{ min: 1, max: 100, message: "数据标签长度需为 1-100 位" },
+					{ required: true, message: t("dictionary.labelRequired") },
+					{ min: 1, max: 100, message: t("dictionary.labelLength") },
 				],
 			},
 			{
 				type: "input",
-				label: "数据键值",
+				label: t("dictionary.value"),
 				name: "dictValue",
-				fieldProps: { maxLength: 100, placeholder: "实际值，如 1" },
+				fieldProps: { maxLength: 100, placeholder: t("dictionary.valuePlaceholder") },
 				rules: [
-					{ required: true, message: "请输入数据键值" },
-					{ min: 1, max: 100, message: "数据键值长度需为 1-100 位" },
+					{ required: true, message: t("dictionary.valueRequired") },
+					{ min: 1, max: 100, message: t("dictionary.valueLength") },
 				],
 			},
 			{
 				type: "input-number",
-				label: "显示顺序",
+				label: t("dictionary.order"),
 				name: "dictSort",
 				fieldProps: { min: 0, style: { width: "100%" } },
 			},
 			{
 				type: "input",
-				label: "样式属性",
+				label: t("dictionary.style"),
 				name: "cssClass",
-				fieldProps: { maxLength: 100, placeholder: "选填" },
+				fieldProps: { maxLength: 100, placeholder: t("dictionary.optional") },
 			},
 			{
 				type: "input",
-				label: "回显样式",
+				label: t("dictionary.echoStyle"),
 				name: "listClass",
 				formItemProps: {
 					className: "col-span-2",
 				},
 				fieldProps: {
 					maxLength: 100,
-					placeholder: "如 success / danger / warning（选填）",
+					placeholder: t("dictionary.echoStylePlaceholder"),
 				},
 			},
 			{
 				type: "radio",
-				label: "是否默认",
+				label: t("dictionary.isDefault"),
 				name: "isDefault",
-				fieldProps: { options: DEFAULT_OPTIONS },
-				rules: [{ required: true, message: "请选择是否默认" }],
+				fieldProps: {
+					options: DEFAULT_OPTIONS.map((item) => ({
+						...item,
+						label: t(item.label),
+					})),
+				},
+				rules: [{ required: true, message: t("dictionary.defaultRequired") }],
 			},
 			{
 				type: "radio",
-				label: "状态",
+				label: t("system.status"),
 				name: "status",
-				fieldProps: { options: STATUS_OPTIONS },
-				rules: [{ required: true, message: "请选择状态" }],
+				fieldProps: {
+					options: STATUS_OPTIONS.map((item) => ({
+						...item,
+						label: t(item.label),
+					})),
+				},
+				rules: [{ required: true, message: t("dictionary.statusRequired") }],
 			},
 		];
-	}, []);
+	}, [t]);
 
 	// 新增：dict_type 通过 extraParams 带入，提交时取用（无需依赖外部状态）
 	const openDataAdd = useCallback((type: IApi.DictTypeItem) => {
 		setDataFormMode({ type: "add" });
 		dataFormRef.current?.open({
-			title: `新增字典数据：${type.dict_name}`,
+			title: `${t("dictionary.addData")}: ${type.dict_name}`,
 			initialValues: { dictSort: 0, isDefault: 0, status: 1 },
 			extraParams: { dictType: type.dict_type },
 		});
-	}, []);
+	}, [t]);
 
 	const openDataEdit = useCallback((record: IApi.DictDataItem) => {
 		setDataFormMode({ type: "edit", record });
 		dataFormRef.current?.open({
-			title: `编辑字典数据：${record.dict_label}`,
+			title: `${t("system.edit")}${t("dictionary.dataTitle")}: ${record.dict_label}`,
 			initialValues: {
 				dictLabel: record.dict_label,
 				dictValue: record.dict_value,
@@ -233,7 +256,7 @@ const DictPage: React.FC = () => {
 			},
 			extraParams: { id: record.id },
 		});
-	}, []);
+	}, [t]);
 
 	const handleDataSubmit = useCallback(
 		async (
@@ -255,121 +278,121 @@ const DictPage: React.FC = () => {
 					...payload,
 					dictType: extraParams?.dictType as string,
 				});
-				message.success("新增字典数据成功");
+				message.success(t("dictionary.addDataSuccess"));
 			} else {
 				await Api.editDictData(extraParams?.id as number, payload);
-				message.success("修改字典数据成功");
+				message.success(t("dictionary.editDataSuccess"));
 			}
 			// 直接刷新弹窗内表格（TableModalView 暴露了内部 ProTable 的 refresh）
 			dataModalRef.current?.refresh();
 		},
-		[dataFormMode.type, message],
+		[dataFormMode.type, message, t],
 	);
 
 	const handleDataDelete = useCallback(
 		async (record: IApi.DictDataItem) => {
 			await Api.deleteDictData(record.id);
-			message.success("删除字典数据成功");
+			message.success(t("dictionary.deleteDataSuccess"));
 			dataModalRef.current?.refresh();
 		},
-		[message],
+		[message, t],
 	);
 
 	// 批量删除字典数据：rows 由 selectedActions 实时传入（无需父组件登记选中）
 	const handleBatchDeleteData = useCallback(
 		(rows: IApi.DictDataItem[]) => {
 			if (!rows.length) {
-				message.warning("请先选择要删除的字典数据");
+				message.warning(t("dictionary.selectDataBeforeDelete"));
 				return;
 			}
 			modal.confirm({
-				title: "批量删除字典数据",
-				content: `确定删除选中的 ${rows.length} 个字典数据吗？`,
-				okText: "删除",
-				cancelText: "取消",
+				title: t("dictionary.deleteData"),
+				content: t("dictionary.deleteSelectedData", { count: rows.length }),
+				okText: t("system.delete"),
+				cancelText: t("common.cancel"),
 				okButtonProps: { danger: true },
 				onOk: async () => {
 					await Api.deleteDictDatas(rows.map((r) => r.id));
-					message.success("批量删除字典数据成功");
+					message.success(t("dictionary.batchDeleteDataSuccess"));
 					dataModalRef.current?.clearSelected();
 					dataModalRef.current?.refresh();
 				},
 			});
 		},
-		[modal, message],
+		[modal, message, t],
 	);
 
 	// 批量删除字典类型：rows 由 selectedActions 实时传入（无需父组件登记选中）
 	const handleBatchDeleteTypes = useCallback(
 		(rows: IApi.DictTypeItem[]) => {
 			if (!rows.length) {
-				message.warning("请先选择要删除的字典类型");
+				message.warning(t("dictionary.selectTypeBeforeDelete"));
 				return;
 			}
 			modal.confirm({
-				title: "批量删除字典类型",
-				content: `确定删除选中的 ${rows.length} 个字典类型吗？将级联删除这些类型下的全部字典数据。`,
-				okText: "删除",
-				cancelText: "取消",
+				title: t("dictionary.deleteType"),
+				content: t("dictionary.deleteSelectedTypes", { count: rows.length }),
+				okText: t("system.delete"),
+				cancelText: t("common.cancel"),
 				okButtonProps: { danger: true },
 				onOk: async () => {
 					await Api.deleteDictTypes(rows.map((t) => t.id));
-					message.success("批量删除字典类型成功");
+					message.success(t("dictionary.batchDeleteTypeSuccess"));
 					typeTableRef.current?.clearSelected();
 					typeTableRef.current?.refresh();
 				},
 			});
 		},
-		[modal, message],
+		[modal, message, t],
 	);
 
 	// ---------- 字典数据：弹窗表格列 ----------
 	const dataColumns = useMemo<ProTableColumnType<IApi.DictDataItem>[]>(
 		() => [
-			{ title: "数据标签", dataIndex: "dict_label", width: 140 },
+			{ title: t("dictionary.label"), dataIndex: "dict_label", width: 140 },
 			{
-				title: "数据键值",
+				title: t("dictionary.value"),
 				dataIndex: "dict_value",
 				width: 140,
 				render: (value) => (
 					<Typography.Text code>{value as string}</Typography.Text>
 				),
 			},
-			{ title: "显示顺序", dataIndex: "dict_sort", width: 90 },
+			{ title: t("dictionary.order"), dataIndex: "dict_sort", width: 90 },
 			{
-				title: "默认",
+				title: t("dictionary.default"),
 				dataIndex: "is_default",
 				width: 70,
 				render: (value) => (
 					<Tag color={(value as number) === 1 ? "blue" : "default"}>
-						{DEFAULT_TEXT[(value as number) ?? 0] ?? "-"}
+						{t(DEFAULT_TEXT[(value as number) ?? 0] ?? "-")}
 					</Tag>
 				),
 			},
 			{
-				title: "回显样式",
+				title: t("dictionary.echoStyle"),
 				dataIndex: "list_class",
 				width: 100,
 				render: (value) => (value ? <Tag>{value as string}</Tag> : "-"),
 			},
 			{
-				title: "状态",
+				title: t("system.status"),
 				dataIndex: "status",
 				width: 80,
 				render: (value) => (
 					<Tag color={(value as number) === 1 ? "green" : "red"}>
-						{STATUS_TEXT[(value as number) ?? 0] ?? "-"}
+						{t(STATUS_TEXT[(value as number) ?? 0] ?? "-")}
 					</Tag>
 				),
 			},
 			{
-				title: "创建时间",
+				title: t("system.createdAt"),
 				dataIndex: "createdAt",
 				width: 170,
 				render: (time) => dayjs(time).format("YYYY-MM-DD HH:mm:ss"),
 			},
 			{
-				title: "操作",
+				title: t("system.action"),
 				key: "action",
 				width: 180,
 				fixed: "right",
@@ -383,14 +406,14 @@ const DictPage: React.FC = () => {
 								icon={<EditOutlined />}
 								onClick={() => openDataEdit(record)}
 							>
-								编辑
+								{t("system.edit")}
 							</Button>
 						)}
 						{hasPerm("system:dict:data:delete") && (
 							<Popconfirm
-								title="确定删除该字典数据吗？"
-								okText="删除"
-								cancelText="取消"
+								title={t("dictionary.deleteDataConfirm")}
+								okText={t("system.delete")}
+								cancelText={t("common.cancel")}
 								okButtonProps={{ danger: true }}
 								onConfirm={() => handleDataDelete(record)}
 							>
@@ -400,7 +423,7 @@ const DictPage: React.FC = () => {
 									variant="filled"
 									icon={<DeleteOutlined />}
 								>
-									删除
+									{t("system.delete")}
 								</Button>
 							</Popconfirm>
 						)}
@@ -408,14 +431,14 @@ const DictPage: React.FC = () => {
 				),
 			},
 		],
-		[hasPerm, openDataEdit, handleDataDelete],
+		[hasPerm, openDataEdit, handleDataDelete, t],
 	);
 
 	// 打开某类型的数据弹窗：api/toolbarExtra/selectedActions 按当前记录闭包生成，数据变更后走 ref.refresh
 	const openData = useCallback(
 		(record: IApi.DictTypeItem) => {
 			dataModalRef.current?.open({
-				title: `字典数据：${record.dict_name}`,
+				title: `${t("dictionary.dataTitle")}: ${record.dict_name}`,
 				columns: dataColumns,
 				api: (params: Record<string, unknown>) =>
 					Api.getDictDataList({
@@ -433,7 +456,7 @@ const DictPage: React.FC = () => {
 						icon={<PlusOutlined />}
 						onClick={() => openDataAdd(record)}
 					>
-						新增数据
+						{t("dictionary.addData")}
 					</Button>
 				) : null,
 				// 批量删除放入选中信息栏：渲染函数实时拿到选中行/个数，无需父组件登记选中
@@ -444,30 +467,36 @@ const DictPage: React.FC = () => {
 							icon={<DeleteOutlined />}
 							onClick={() => handleBatchDeleteData(selectedRows)}
 						>
-							批量删除({selectedCount})
+							{t("dictionary.batchDeleteButton", { count: selectedCount })}
 						</Button>
 					),
 				search: {
 					fields: [
-						{ type: "input", label: "数据标签", name: "dictLabel" },
+						{ type: "input", label: t("dictionary.label"), name: "dictLabel" },
 						{
 							type: "select",
-							label: "状态",
+							label: t("system.status"),
 							name: "status",
-							fieldProps: { options: STATUS_OPTIONS, allowClear: true },
+							fieldProps: {
+								options: STATUS_OPTIONS.map((item) => ({
+									...item,
+									label: t(item.label),
+								})),
+								allowClear: true,
+							},
 						},
 					],
 				},
 			});
 		},
-		[dataColumns, hasPerm, openDataAdd, handleBatchDeleteData],
+		[dataColumns, hasPerm, openDataAdd, handleBatchDeleteData, t],
 	);
 
 	// ---------- 字典类型：主表列 ----------
 	const typeColumns: ProTableColumnType<IApi.DictTypeItem>[] = [
-		{ title: "字典名称", dataIndex: "dict_name", width: 180 },
+		{ title: t("dictionary.name"), dataIndex: "dict_name", width: 180 },
 		{
-			title: "字典类型",
+			title: t("dictionary.type"),
 			dataIndex: "dict_type",
 			width: 200,
 			render: (value) => (
@@ -475,23 +504,23 @@ const DictPage: React.FC = () => {
 			),
 		},
 		{
-			title: "状态",
+			title: t("system.status"),
 			dataIndex: "status",
 			width: 80,
 			render: (value) => (
 				<Tag color={(value as number) === 1 ? "green" : "red"}>
-					{STATUS_TEXT[(value as number) ?? 0] ?? "-"}
+					{t(STATUS_TEXT[(value as number) ?? 0] ?? "-")}
 				</Tag>
 			),
 		},
 		{
-			title: "创建时间",
+			title: t("system.createdAt"),
 			dataIndex: "createdAt",
 			width: 170,
 			render: (time) => dayjs(time).format("YYYY-MM-DD HH:mm:ss"),
 		},
 		{
-			title: "操作",
+			title: t("system.action"),
 			key: "action",
 			width: 260,
 			fixed: "right",
@@ -505,7 +534,7 @@ const DictPage: React.FC = () => {
 							icon={<EyeOutlined />}
 							onClick={() => openData(record)}
 						>
-							查看数据
+							{t("dictionary.viewData")}
 						</Button>
 					)}
 					{hasPerm("system:dict:type:edit") && (
@@ -516,15 +545,15 @@ const DictPage: React.FC = () => {
 							icon={<EditOutlined />}
 							onClick={() => openTypeEdit(record)}
 						>
-							编辑
+							{t("system.edit")}
 						</Button>
 					)}
 					{hasPerm("system:dict:type:delete") && (
 						<Popconfirm
-							title="确定删除该字典类型吗？"
-							description="将级联删除该类型下的全部字典数据"
-							okText="删除"
-							cancelText="取消"
+							title={t("dictionary.deleteTypeConfirm")}
+							description={t("dictionary.cascadeDelete")}
+							okText={t("system.delete")}
+							cancelText={t("common.cancel")}
 							okButtonProps={{ danger: true }}
 							onConfirm={() => handleTypeDelete(record)}
 						>
@@ -534,7 +563,7 @@ const DictPage: React.FC = () => {
 								variant="filled"
 								icon={<DeleteOutlined />}
 							>
-								删除
+								{t("system.delete")}
 							</Button>
 						</Popconfirm>
 					)}
@@ -550,7 +579,7 @@ const DictPage: React.FC = () => {
 				rowKey="id"
 				api={Api.getDictTypeList}
 				columns={typeColumns}
-				title="字典类型"
+				title={t("dictionary.typeTitle")}
 				toolbarExtra={
 					hasPerm("system:dict:type:add") ? (
 						<Button
@@ -558,7 +587,7 @@ const DictPage: React.FC = () => {
 							icon={<PlusOutlined />}
 							onClick={openTypeAdd}
 						>
-							新增类型
+							{t("dictionary.addTypeButton")}
 						</Button>
 					) : null
 				}
@@ -570,19 +599,25 @@ const DictPage: React.FC = () => {
 							icon={<DeleteOutlined />}
 							onClick={() => handleBatchDeleteTypes(selectedRows)}
 						>
-							批量删除({selectedCount})
+							{t("dictionary.batchDeleteButton", { count: selectedCount })}
 						</Button>
 					)
 				}
 				search={{
 					fields: [
-						{ type: "input", label: "字典名称", name: "dictName" },
-						{ type: "input", label: "字典类型", name: "dictType" },
+						{ type: "input", label: t("dictionary.name"), name: "dictName" },
+						{ type: "input", label: t("dictionary.type"), name: "dictType" },
 						{
 							type: "select",
-							label: "状态",
+							label: t("system.status"),
 							name: "status",
-							fieldProps: { options: STATUS_OPTIONS, allowClear: true },
+							fieldProps: {
+								options: STATUS_OPTIONS.map((item) => ({
+									...item,
+									label: t(item.label),
+								})),
+								allowClear: true,
+							},
 						},
 					],
 				}}
@@ -593,7 +628,7 @@ const DictPage: React.FC = () => {
 				fields={getTypeFormFields()}
 				onConfirm={handleTypeSubmit}
 			/>
-			<TableModalView ref={dataModalRef} title="字典数据" width={1280} />
+			<TableModalView ref={dataModalRef} title={t("dictionary.dataTitle")} width={1280} />
 			{/* 数据字典（zIndex 高于 TableModalView 弹窗，保证编辑/新增表单悬浮在其上） */}
 			<ProForm
 				ref={dataFormRef}

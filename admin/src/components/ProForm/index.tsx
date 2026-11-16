@@ -28,6 +28,7 @@ import { DividerField } from "./components/DividerField";
 import { StandardField } from "./components/StandardField";
 import { FormFooter } from "./components/FormFooter";
 import { useGlobalStore } from "@/stores";
+import { useTranslation } from "react-i18next";
 
 /**
  * ProForm 配置化表单组件
@@ -40,6 +41,7 @@ import { useGlobalStore } from "@/stores";
  */
 export const ProForm = forwardRef<ProFormInstance, ProFormProps>(
 	(props, ref) => {
+		const { t } = useTranslation();
 		const {
 			title,
 			fields,
@@ -162,10 +164,10 @@ export const ProForm = forwardRef<ProFormInstance, ProFormProps>(
 			if (type === "pure") return;
 			if (confirmOnClose && isFormDirty(form, baselineRef.current, fields)) {
 				window.$modal.confirm({
-					title: "确认关闭",
-					content: "表单内容已修改，关闭后将丢失未保存的修改，确定关闭吗？",
-					okText: "确定关闭",
-					cancelText: "取消",
+					title: t("form.confirmClose"),
+					content: t("form.dirtyWarning"),
+					okText: t("form.confirmCloseButton"),
+					cancelText: t("common.cancel"),
 					onOk: () => {
 						forceClose();
 					},
@@ -173,7 +175,7 @@ export const ProForm = forwardRef<ProFormInstance, ProFormProps>(
 				return;
 			}
 			forceClose();
-		}, [type, confirmOnClose, form, fields, forceClose]);
+		}, [type, confirmOnClose, form, fields, forceClose, t]);
 
 		// 处理初始值中的时间字段转换
 		const normalizedInitialValues = useMemo(
@@ -281,8 +283,8 @@ export const ProForm = forwardRef<ProFormInstance, ProFormProps>(
 			if (defaultButtons === null) return null;
 
 			const _defaultButtons = defaultButtons ?? {
-				confirmText: "确认",
-				resetText: "重置",
+				confirmText: t("common.confirm"),
+				resetText: t("common.reset"),
 				confirmIcon: null,
 				resetIcon: null,
 				hideConfirm: false,
@@ -305,7 +307,7 @@ export const ProForm = forwardRef<ProFormInstance, ProFormProps>(
 						)
 					}
 				>
-					{collapsed ? "展开" : "收起"}
+					{collapsed ? t("form.expand") : t("form.collapse")}
 				</Button>
 			) : null;
 
@@ -322,7 +324,7 @@ export const ProForm = forwardRef<ProFormInstance, ProFormProps>(
 									onClick={handleReset}
 									disabled={loading}
 								>
-									{_defaultButtons.resetText ?? "重置"}
+									{_defaultButtons.resetText ?? t("common.reset")}
 								</Button>
 							)}
 							{!_defaultButtons.hideConfirm && (
@@ -334,7 +336,7 @@ export const ProForm = forwardRef<ProFormInstance, ProFormProps>(
 									onClick={handleConfirm}
 									disabled={loading}
 								>
-									{_defaultButtons.confirmText ?? "确认"}
+									{_defaultButtons.confirmText ?? t("common.confirm")}
 								</Button>
 							)}
 							{collapseToggle}
@@ -365,6 +367,7 @@ export const ProForm = forwardRef<ProFormInstance, ProFormProps>(
 			needsCollapse,
 			collapsed,
 			handleToggleCollapse,
+			t,
 		]);
 
 		// 移动端模式强制垂直布局，inline 模式使用 inline，否则使用传入布局或默认 horizontal
@@ -419,7 +422,7 @@ export const ProForm = forwardRef<ProFormInstance, ProFormProps>(
 									size="large"
 									onClick={handleReset}
 								>
-									重置
+									{t("common.reset")}
 								</Button>
 								<Button
 									loading={loading}
@@ -428,7 +431,7 @@ export const ProForm = forwardRef<ProFormInstance, ProFormProps>(
 									type="primary"
 									onClick={handleConfirm}
 								>
-									提交
+									{t("form.submit")}
 								</Button>
 							</div>
 						)
@@ -459,7 +462,7 @@ export const ProForm = forwardRef<ProFormInstance, ProFormProps>(
 								size="large"
 								onClick={handleReset}
 							>
-								重置
+								{t("common.reset")}
 							</Button>
 							<Button
 								loading={loading}
@@ -468,7 +471,7 @@ export const ProForm = forwardRef<ProFormInstance, ProFormProps>(
 								type="primary"
 								onClick={handleConfirm}
 							>
-								提交
+								{t("form.submit")}
 							</Button>
 						</div>
 					)

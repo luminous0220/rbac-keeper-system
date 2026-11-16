@@ -28,8 +28,10 @@ import type { ProFormInstance } from "@/components/ProForm";
 import "./index.scss";
 import { CalendarCell } from "./components/CalendarCell";
 import NotificationList from "./components/NotificationList";
+import { useTranslation } from "react-i18next";
 
 export const Calendar: React.FC = () => {
+	const { t, i18n } = useTranslation();
 	const [currentMonth, setCurrentMonth] = useState<Dayjs>(dayjs());
 	const [formDate, setFormDate] = useState("");
 	const [editingReminder, setEditingReminder] =
@@ -86,9 +88,11 @@ export const Calendar: React.FC = () => {
 			formRef.current?.open({
 				title: (
 					<span>
-						<span>新增提醒：</span>
+						<span>{t("calendar.addTitle")}</span>
 						<span className="text-red-400">
-							{dayjs(dateStr).format("YYYY年MM月DD日")}
+							{new Intl.DateTimeFormat(i18n.resolvedLanguage).format(
+								dayjs(dateStr).toDate(),
+							)}
 						</span>
 					</span>
 				),
@@ -101,7 +105,7 @@ export const Calendar: React.FC = () => {
 				},
 			});
 		},
-		[reminders.length],
+		[reminders.length, t, i18n.resolvedLanguage],
 	);
 
 	const openEditForm = useCallback((reminder: CalendarReminder) => {
@@ -111,9 +115,11 @@ export const Calendar: React.FC = () => {
 		formRef.current?.open({
 			title: (
 				<span>
-					<span>编辑提醒：</span>
+					<span>{t("calendar.editTitle")}</span>
 					<span className="text-red-400">
-						{dayjs(dateStr).format("YYYY年MM月DD日")}
+						{new Intl.DateTimeFormat(i18n.resolvedLanguage).format(
+							dayjs(dateStr).toDate(),
+						)}
 					</span>
 				</span>
 			),
@@ -125,7 +131,7 @@ export const Calendar: React.FC = () => {
 				sort: reminder.sort ?? 1,
 			},
 		});
-	}, []);
+	}, [t, i18n.resolvedLanguage]);
 
 	const closeForm = useCallback(() => {
 		formRef.current?.close();
@@ -199,10 +205,10 @@ export const Calendar: React.FC = () => {
 			store.reminders.forEach((r) => {
 				if (!r.notified && !r.completed && dayjs(r.dateTime).isBefore(now)) {
 					window.$notification?.warning?.({
-						message: `提醒: ${r.title}`,
+						message: `${t("calendar.reminder")}: ${r.title}`,
 						description:
 							r.note ||
-							`到期时间: ${dayjs(r.dateTime).format("YYYY-MM-DD HH:mm")}`,
+							`${t("calendar.dueTime")}: ${dayjs(r.dateTime).format("YYYY-MM-DD HH:mm")}`,
 						duration: 86400,
 					});
 					store.updateReminder(r.id, { notified: true });
@@ -213,7 +219,7 @@ export const Calendar: React.FC = () => {
 		checkReminders();
 		const timer = setInterval(checkReminders, 30000);
 		return () => clearInterval(timer);
-	}, []);
+	}, [t]);
 
 	// ── Notification center edit → navigate to date ───────────────
 
@@ -237,9 +243,11 @@ export const Calendar: React.FC = () => {
 			formRef.current?.open({
 				title: (
 					<span>
-						<span>编辑提醒：</span>
+						<span>{t("calendar.editTitle")}</span>
 						<span className="text-red-400">
-							{dayjs(dateStr).format("YYYY年MM月DD日")}
+							{new Intl.DateTimeFormat(i18n.resolvedLanguage).format(
+								dayjs(dateStr).toDate(),
+							)}
 						</span>
 					</span>
 				),
@@ -254,7 +262,7 @@ export const Calendar: React.FC = () => {
 			setPendingEditId(null);
 		});
 		return () => cancelAnimationFrame(raf);
-	}, [pendingEditId, currentMonth, reminders]);
+	}, [pendingEditId, currentMonth, reminders, t, i18n.resolvedLanguage]);
 
 	// ── Derived data ──────────────────────────────────────────────
 
@@ -264,21 +272,21 @@ export const Calendar: React.FC = () => {
 		return [
 			{
 				name: "title",
-				label: "标题",
+				label: t("calendar.title"),
 				type: "input" as const,
-				rules: [{ required: true, message: "请输入标题" }],
+				rules: [{ required: true, message: t("calendar.enterTitle") }],
 			},
 			{
 				name: "note",
-				label: "备注",
+				label: t("calendar.note"),
 				type: "textarea" as const,
-				fieldProps: { rows: 2, placeholder: "备注（选填）" },
+				fieldProps: { rows: 2, placeholder: t("calendar.noteOptional") },
 			},
 			{
 				name: "dateTime",
-				label: "提醒时间",
+				label: t("calendar.time"),
 				type: "time-picker" as const,
-				rules: [{ required: true, message: "请选择时间" }],
+				rules: [{ required: true, message: t("calendar.selectTime") }],
 				fieldProps: {
 					format: "HH:mm",
 					style: { width: "100%" },
@@ -286,9 +294,9 @@ export const Calendar: React.FC = () => {
 			},
 			{
 				name: "sort",
-				label: "排序",
+				label: t("calendar.order"),
 				type: "input-number" as const,
-				rules: [{ required: true, message: "请输入序号" }],
+				rules: [{ required: true, message: t("calendar.enterOrder") }],
 				fieldProps: {
 					min: 1,
 					style: { width: "100%" },
@@ -296,15 +304,15 @@ export const Calendar: React.FC = () => {
 			},
 			{
 				name: "color",
-				label: "颜色标识",
-				rules: [{ required: true, message: "请选择颜色" }],
+				label: t("calendar.color"),
+				rules: [{ required: true, message: t("calendar.selectColor") }],
 				render: (_value: unknown, form: FormInstance) => (
 					<ColorPicker
 						value={form.getFieldValue("color")}
 						presets={[
 							{
-								label: "预设",
-								colors: COLOR_OPTIONS.map((c) => c.value),
+								label: t("calendar.preset"),
+								colors: COLOR_OPTIONS,
 							},
 						]}
 						showText
@@ -313,7 +321,7 @@ export const Calendar: React.FC = () => {
 				),
 			},
 		];
-	}, []);
+	}, [t]);
 
 	// ── Render ────────────────────────────────────────────────────
 
@@ -363,7 +371,7 @@ export const Calendar: React.FC = () => {
 			<div className="grid grid-cols-7 border-b border-[var(--ant-color-border)]">
 				{WEEKDAYS.map((day) => (
 					<div key={day} className="calendar-weekday">
-						{day}
+						{dayjs().day(day).format("dd")}
 					</div>
 				))}
 			</div>
@@ -413,7 +421,7 @@ export const Calendar: React.FC = () => {
 								onClick={handleFormDelete}
 								style={{ marginRight: 8 }}
 							>
-								删除
+								{t("calendar.delete")}
 							</Button>
 						)}
 						<Button
@@ -422,7 +430,7 @@ export const Calendar: React.FC = () => {
 							color={editingReminder ? "pink" : "primary"}
 							onClick={handleFormSubmit}
 						>
-							{editingReminder ? "编辑" : "新增"}
+							{editingReminder ? t("calendar.edit") : t("calendar.add")}
 						</Button>
 					</div>
 				}

@@ -9,6 +9,7 @@ import type {
 	TableSelectorKey,
 	TableSelectorProps,
 } from "./types";
+import { useTranslation } from "react-i18next";
 
 export type {
 	TableSelectorNode,
@@ -30,13 +31,15 @@ export function TableSelector<
 	title,
 	checkedKeys: controlledCheckedKeys,
 	onChange,
-	placeholder = "请选择",
+	placeholder: providedPlaceholder,
 	disabled = false,
 	width,
 	selectionType,
 	renderTrigger,
 	...restProps
 }: TableSelectorProps<T>) {
+	const { t } = useTranslation();
+	const placeholder = providedPlaceholder ?? t("common.select");
 	const isControlled = controlledCheckedKeys !== undefined;
 	const [internalCheckedKeys, setInternalCheckedKeys] = useState<TableSelectorKey[]>(
 		controlledCheckedKeys ?? [],

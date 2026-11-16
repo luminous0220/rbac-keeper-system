@@ -6,6 +6,8 @@ import { UploadProps } from "antd/lib";
 import React from "react";
 import axios, { AxiosProgressEvent } from "axios";
 import { ProUploadProps } from "./types.d";
+import { useTranslation } from "react-i18next";
+import i18n from "@/i18n";
 
 // 图片类型 MIME 对应表
 const IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png"];
@@ -29,7 +31,7 @@ const compressImage = async (
 				const ctx = canvas.getContext("2d");
 
 				if (!ctx) {
-					reject(new Error("无法创建 canvas context"));
+					reject(new Error(i18n.t("upload.canvasContextError")));
 					return;
 				}
 
@@ -54,7 +56,7 @@ const compressImage = async (
 									quality -= 0.1;
 									tryCompress();
 								} else {
-									reject(new Error("图片压缩失败"));
+									reject(new Error(i18n.t("upload.compressionFailed")));
 								}
 								return;
 							}
@@ -77,11 +79,11 @@ const compressImage = async (
 				tryCompress();
 			};
 
-			img.onerror = () => reject(new Error("图片加载失败"));
+			img.onerror = () => reject(new Error(i18n.t("upload.imageLoadFailed")));
 			img.src = e.target?.result as string;
 		};
 
-		reader.onerror = () => reject(new Error("文件读取失败"));
+		reader.onerror = () => reject(new Error(i18n.t("upload.fileReadFailed")));
 		reader.readAsDataURL(file);
 	});
 };
@@ -90,7 +92,7 @@ const compressImage = async (
 const processFileList = (files: UploadFile[]): UploadFile[] =>
 	files.map((item, index) => ({
 		uid: item.uid || `file-${index}`,
-		name: item.name || "文件",
+		name: item.name || i18n.t("upload.file"),
 		url: getAssetUrl(item.url),
 		status: item.status || "done",
 		thumbUrl: getAssetUrl(item.thumbUrl),
@@ -104,7 +106,7 @@ const ProUpload_ = (props: ProUploadProps) => {
 		defaultFileList = [],
 		maxCount = 1,
 		multiple = true,
-		uploadText = "点击上传",
+		uploadText: propUploadText,
 		maxSize = 3,
 		description,
 		compressSize,
@@ -112,10 +114,12 @@ const ProUpload_ = (props: ProUploadProps) => {
 		onChange,
 		...restProps
 	} = props;
+	const { t } = useTranslation();
+	const uploadText = propUploadText ?? t("upload.click");
 
 	if (!Array.isArray(defaultFileList)) {
-		console.error("defaultFileList 必须是数组");
-		return "defaultFileList 必须是数组";
+		console.error(t("upload.invalidFileList"));
+		return t("upload.invalidFileList");
 	}
 
 	// Form.Item 通过 valuePropName 传递 fileList 时为受控模式，否则使用 defaultFileList
@@ -135,7 +139,7 @@ const ProUpload_ = (props: ProUploadProps) => {
 		beforeUpload: async (file) => {
 			const isLtMaxSize = file.size / 1024 / 1024 < maxSize;
 			if (!isLtMaxSize) {
-				window.$message.error(`文件大小不能超过 ${maxSize}MB!`);
+				window.$message.error(t("upload.fileTooLarge", { size: maxSize }));
 				return Upload.LIST_IGNORE;
 			}
 
@@ -158,7 +162,7 @@ const ProUpload_ = (props: ProUploadProps) => {
 						);
 					}
 				} catch (error) {
-					console.error("图片压缩失败，将使用原图上传:", error);
+					console.error("Image compression failed; uploading the original file:", error);
 				}
 			}
 
@@ -217,7 +221,7 @@ const ProUpload_ = (props: ProUploadProps) => {
 		...restProps,
 	};
 
-	const desc = description ? description : `仅支持上传 ${maxSize} MB的文件`;
+	const desc = description ?? t("upload.onlyFiles", { size: maxSize });
 	if (mode === "button") {
 		return (
 			<Upload {...uploadProps}>
@@ -232,8 +236,10 @@ const ProUpload_ = (props: ProUploadProps) => {
 			<Upload.Dragger {...uploadProps}>
 				<div className="flex-center flex-col">
 					<IconUpload className="size-8 text-[#4CC9F0]" />
-					<span className="mt-2">点击或者拖拽文件到进行上传</span>
-					<div className="mt-2 text-gray-400">注意：{desc}</div>
+					<span className="mt-2">{t("upload.dragHint")}</span>
+					<div className="mt-2 text-gray-400">
+						{t("upload.note")}{desc}
+					</div>
 				</div>
 			</Upload.Dragger>
 		);

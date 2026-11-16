@@ -2,6 +2,7 @@
 import { Spin } from "antd";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
+import i18n from "@/i18n";
 
 interface LoadingOptions {
   tip?: string;
@@ -12,7 +13,7 @@ class LoadingStore {
   private callbacks: ((state: LoadingState) => void)[] = [];
   private count = 0;
   private _visible = false;
-  private _tip = "请稍后..."; // 默认提示
+  private _tip = i18n.t("common.pleaseWait");
   private timeoutId: any = null;
 
   get state() {
@@ -31,7 +32,7 @@ class LoadingStore {
   }
 
   show(options?: string | LoadingOptions) {
-    let tip = "请稍后...";
+    let tip = i18n.t("common.pleaseWait");
     let delay = 0;
 
     if (typeof options === "string") {

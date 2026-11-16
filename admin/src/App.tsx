@@ -1,9 +1,12 @@
 // src/App.tsx
 import { ConfigProvider, App as Message, theme } from "antd";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import locale from "antd/locale/zh_CN";
+import zhCN from "antd/locale/zh_CN";
+import enUS from "antd/locale/en_US";
 import dayjs from "dayjs";
 import "dayjs/locale/zh-cn";
+import "dayjs/locale/en";
+import { useTranslation } from "react-i18next";
 import { MessageHolder, FullLoadingHolder } from "./hooks";
 import { useThemeStore } from "./stores";
 import { AppRouter } from "./routers";
@@ -16,15 +19,16 @@ const queryClient = new QueryClient({
 	},
 });
 
-dayjs.locale("zh-cn");
-
 const App = () => {
 	const { isDark, colorPrimary } = useThemeStore();
+	const { i18n } = useTranslation();
+	const isEnglish = i18n.resolvedLanguage === "en-US";
+	dayjs.locale(isEnglish ? "en" : "zh-cn");
 
 	return (
 		<div className="size-full">
 			<ConfigProvider
-				locale={locale}
+				locale={isEnglish ? enUS : zhCN}
 				theme={{
 					algorithm: isDark ? theme.darkAlgorithm : theme.defaultAlgorithm,
 					token: {

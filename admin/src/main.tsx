@@ -7,6 +7,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import { initResize } from "@/libs";
+import "@/i18n";
 
 // 创建容器以避免严格模式下的副作用
 let initialized = false;

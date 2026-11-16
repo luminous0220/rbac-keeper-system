@@ -1,6 +1,7 @@
 import { Button, Card } from "antd";
 import { IconX } from "@tabler/icons-react";
 import type { SelectedPanelProps } from "../types";
+import { useTranslation } from "react-i18next";
 
 /**
  * @description 选择器已选面板 — 展示已选项列表，支持单项删除和清空
@@ -13,6 +14,7 @@ export const SelectedPanel: React.FC<SelectedPanelProps> = ({
 	onRemove,
 	onClearAll,
 }) => {
+	const { t } = useTranslation();
 	return (
 		<Card
 			className={className}
@@ -26,10 +28,7 @@ export const SelectedPanel: React.FC<SelectedPanelProps> = ({
 			title={
 				<div className="flex justify-between items-center">
 					<span className="text-base">
-						已选{" "}
-						<span className="text-[var(--ant-color-primary)] font-semibold">
-							{selectedItems.length}
-						</span>
+						{t("selector.selected", { count: selectedItems.length })}
 					</span>
 					<Button
 						type="link"
@@ -37,13 +36,15 @@ export const SelectedPanel: React.FC<SelectedPanelProps> = ({
 						onClick={onClearAll}
 						disabled={!selectedItems.length}
 					>
-						清空
+						{t("selector.clear")}
 					</Button>
 				</div>
 			}
 		>
 			{selectedItems.length === 0 ? (
-				<div className="text-gray-400 text-center py-12">暂无选择</div>
+				<div className="text-gray-400 text-center py-12">
+					{t("selector.noneSelected")}
+				</div>
 			) : (
 				<div className="flex flex-col gap-2">
 					{selectedItems.map((item) => (

@@ -43,11 +43,13 @@ import { SelectedInfo } from "./SelectedInfo";
 import { DragHandle, SortableRow } from "./DragSortRow";
 import { SearchOutlined } from "@ant-design/icons";
 import { throttle } from "lodash";
+import { useTranslation } from "react-i18next";
 
 export function ProTableInner<T>(
 	props: ProTableProps<T>,
 	ref: React.ForwardedRef<ProTableRef<T>>,
 ) {
+	const { t } = useTranslation();
 	const {
 		api,
 		auto = true,
@@ -352,10 +354,10 @@ export function ProTableInner<T>(
 
 		// 内置 Excel 导出
 		if (!selectedRows.length) {
-			window.$message?.warning?.("请选择要导出的行");
+			window.$message?.warning?.(t("table.exportSelectRequired"));
 			return;
 		}
-		window.$message?.info?.("导出中，请稍后...");
+		window.$message?.info?.(t("table.exporting"));
 		try {
 			// 获取当前可见的列（排除无 dataIndex 的列和序号列）
 			const exportColumns = renderedColumns.filter(
@@ -407,7 +409,7 @@ export function ProTableInner<T>(
 			const fileName = exportFileName
 				? `${exportFileName}.xlsx`
 				: title
-					? `${title}-表格.xlsx`
+					? `${title}-${t("table.fileSuffix")}.xlsx`
 					: `${new Date().toISOString().slice(0, 10)}.xlsx`;
 			saveAs(
 				new Blob([buffer], {
@@ -416,9 +418,9 @@ export function ProTableInner<T>(
 				fileName,
 			);
 		} catch {
-			window.$message?.error?.("导出失败，请重试");
+			window.$message?.error?.(t("table.exportFailed"));
 		}
-	}, [onExport, selectedRows, renderedColumns, title, exportFileName]);
+	}, [onExport, selectedRows, renderedColumns, title, exportFileName, t]);
 
 	// 密度变化回调
 	const handleDensityChange = useCallback(
@@ -611,8 +613,8 @@ export function ProTableInner<T>(
 						}}
 						disabled={loading}
 						defaultButtons={{
-							confirmText: "查询",
-							resetText: "重置",
+							confirmText: t("common.search"),
+							resetText: t("common.reset"),
 							confirmIcon: <SearchOutlined />,
 						}}
 						onReset={async (values: Record<string, any>) => {

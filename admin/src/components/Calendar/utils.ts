@@ -2,19 +2,19 @@ import dayjs, { type Dayjs } from "dayjs";
 import type { CalendarReminder } from "./types.d";
 
 export const COLOR_OPTIONS = [
-	{ label: "红色", value: "#ff4d4f" },
-	{ label: "橙色", value: "#fa8c16" },
-	{ label: "金色", value: "#faad14" },
-	{ label: "绿色", value: "#52c41a" },
-	{ label: "青色", value: "#13c2c2" },
-	{ label: "蓝色", value: "#1677ff" },
-	{ label: "紫色", value: "#722ed1" },
-	{ label: "粉色", value: "#eb2f96" },
+	"#ff4d4f",
+	"#fa8c16",
+	"#faad14",
+	"#52c41a",
+	"#13c2c2",
+	"#1677ff",
+	"#722ed1",
+	"#eb2f96",
 ];
 
 export const DEFAULT_REMINDER_COLOR = "#1677ff";
 
-export const WEEKDAYS = ["日", "一", "二", "三", "四", "五", "六"];
+export const WEEKDAYS = [0, 1, 2, 3, 4, 5, 6];
 
 export const buildCalendarDays = (month: Dayjs): Dayjs[] => {
 	const startOfMonth = month.startOf("month");
