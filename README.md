@@ -4,6 +4,23 @@
 
 # RBAC Keeper System
 
+### 🖼️ 界面预览
+
+<table>
+  <tr>
+    <td align="center"><a href="./docs/images/admin-dashboard.png"><img src="./docs/images/admin-dashboard.png" width="100%"></a></td>
+    <td align="center"><a href="./docs/images/admin-users.png"><img src="./docs/images/admin-users.png"  width="100%"></a></td>
+  </tr>
+  <tr>
+    <td align="center"><a href="./docs/images/admin-roles.png"><img src="./docs/images/admin-roles.png"  width="100%"></a></td>
+    <td align="center"><a href="./docs/images/admin-departments.png"><img src="./docs/images/admin-departments.png" width="100%"></a></td>
+  </tr>
+  <tr>
+    <td align="center"><a href="./docs/images/admin-operation-logs.png"><img src="./docs/images/admin-operation-logs.png"  width="100%"></a></td>
+    <td align="center"><a href="./docs/images/admin-operation.png"><img src="./docs/images/admin-operation.png"  width="100%"></a></td>
+  </tr>
+</table>
+
 **基于 RBAC 的后台权限管理系统**
 
 <a href="#中文">中文</a>　|　<a href="#english">English</a>
@@ -26,23 +43,6 @@
 <p align="right"><a href="#english">切换到 English →</a></p>
 
 基于 RBAC 的后台权限管理系统，包含 React 管理端和 Go API 服务，提供用户、角色、菜单、部门、字典及登录/操作日志等功能。
-
-### 🖼️ 界面预览
-
-<table>
-  <tr>
-    <td align="center"><a href="./docs/images/admin-dashboard.png"><img src="./docs/images/admin-dashboard.png" width="100%"></a></td>
-    <td align="center"><a href="./docs/images/admin-users.png"><img src="./docs/images/admin-users.png"  width="100%"></a></td>
-  </tr>
-  <tr>
-    <td align="center"><a href="./docs/images/admin-roles.png"><img src="./docs/images/admin-roles.png"  width="100%"></a></td>
-    <td align="center"><a href="./docs/images/admin-departments.png"><img src="./docs/images/admin-departments.png" width="100%"></a></td>
-  </tr>
-  <tr>
-    <td align="center"><a href="./docs/images/admin-operation-logs.png"><img src="./docs/images/admin-operation-logs.png"  width="100%"></a></td>
-    <td align="center"><a href="./docs/images/admin-operation-logs.png"><img src="./docs/images/admin-operation.png"  width="100%"></a></td>
-  </tr>
-</table>
 
 ### 📁 项目结构
 
@@ -171,22 +171,6 @@ HTTP 服务监听 `config.yaml` 中 `server.port` 指定的端口（仓库示例
 
 An RBAC-based administration system with a React admin console and a Go API server. It includes user, role, menu, department, dictionary, login-log, and operation-log management.
 
-### 🖼️ Screenshots
-
-<table>
-  <tr>
-    <td align="center"><a href="./docs/images/admin-dashboard.png"><img src="./docs/images/admin-dashboard.png" alt="Dashboard" width="100%"></a><br><sub>📊 Dashboard</sub></td>
-    <td align="center"><a href="./docs/images/admin-users.png"><img src="./docs/images/admin-users.png" alt="User management" width="100%"></a><br><sub>👥 User management</sub></td>
-  </tr>
-  <tr>
-    <td align="center"><a href="./docs/images/admin-roles.png"><img src="./docs/images/admin-roles.png" alt="Role management" width="100%"></a><br><sub>🛡️ Role management</sub></td>
-    <td align="center"><a href="./docs/images/admin-departments.png"><img src="./docs/images/admin-departments.png" alt="Department management" width="100%"></a><br><sub>🏢 Department management</sub></td>
-  </tr>
-  <tr>
-    <td align="center"><a href="./docs/images/admin-operation-logs.png"><img src="./docs/images/admin-operation-logs.png" alt="Operation logs" width="100%"></a><br><sub>📝 Operation logs</sub></td>
-    <td></td>
-  </tr>
-</table>
 
 ### 📁 Project Structure
 
