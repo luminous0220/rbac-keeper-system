@@ -4,6 +4,22 @@
 
 # RBAC Keeper System
 
+
+**基于 RBAC 的后台权限管理系统**
+
+<a href="#中文">中文</a>　|　<a href="#english">English</a>
+
+</div>
+
+<p align="center">
+  <a href="./docs/images/admin-login.png">
+    <img src="./docs/images/admin-login.png" alt="RBAC Keeper admin login page / 管理端登录页面" width="92%">
+  </a>
+</p>
+<p align="center"><sub>🖥️ 管理端登录页预览 · Admin login page preview</sub></p>
+
+---
+
 ### 🖼️ 界面预览
 
 <table>
@@ -21,20 +37,6 @@
   </tr>
 </table>
 
-**基于 RBAC 的后台权限管理系统**
-
-<a href="#中文">中文</a>　|　<a href="#english">English</a>
-
-</div>
-
-<p align="center">
-  <a href="./docs/images/admin-login.png">
-    <img src="./docs/images/admin-login.png" alt="RBAC Keeper admin login page / 管理端登录页面" width="92%">
-  </a>
-</p>
-<p align="center"><sub>🖥️ 管理端登录页预览 · Admin login page preview</sub></p>
-
----
 
 <a id="中文"></a>
 
